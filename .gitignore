@@ -1,0 +1,18 @@
+# Ambiente Virtual
+venv/
+*.venv
+
+# Arquivos de Chaves de API
+.env
+
+# Arquivos do Python
+__pycache__/
+*.pyc
+
+# Arquivos de Log
+*.log
+*.txt 
+# CUIDADO: Se seu jarvis_log.txt for importante, remova a linha acima.
+
+# Arquivos do Streamlit
+.streamlit/

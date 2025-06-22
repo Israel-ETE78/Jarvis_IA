@@ -1,0 +1,22 @@
+{
+    "20250622_161609_554338": {
+        "title": "Nova Conversa",
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "Busque informações sobre o clima em Recife hoje e gere uma imagem que ilustre o dia."
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Hoje em Recife, a previsão do tempo indica temperaturas entre 23°C e 27°C, com alta probabilidade de chuva rápida durante o dia e à noite. O céu estará parcialmente nublado, com sol e algumas nuvens. A chance de chuva é de 96%, com um acumulado de 36mm ao longo do dia.\n\nInfelizmente, não posso gerar imagens, mas imagine um dia um pouco cinzento com nuvens, mas ainda com alguns raios de sol brilhando entre elas. Tenha um guarda-chuva em mãos, pois a chuva rápida deve aparecer!",
+                "origem": "openai_web"
+            }
+        ],
+        "contexto_arquivo": "",
+        "ultima_mensagem_falada": null,
+        "processed_file_name": null,
+        "resumo_curto_prazo": ""
+    }
+}
