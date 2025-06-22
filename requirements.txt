@@ -10,8 +10,7 @@ langdetect
 streamlit
 SpeechRecognition
 PyAudio
-portaudio19-dev
-libasound2-dev
+
 # Manipulação de Arquivos e Dados
 pandas
 openpyxl # Necessário para o Pandas ler arquivos .xlsx
