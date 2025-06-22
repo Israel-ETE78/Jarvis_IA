@@ -811,10 +811,19 @@ with st.sidebar:
             if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_{chat_id}"):
                 create_new_chat()
                 st.rerun()
-if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
-    texto_audio = escutar_audio()
-    if texto_audio != "Não consegui entender o que você disse.":
-        processar_entrada_usuario(texto_audio)
+# Detecta se estamos na nuvem verificando a existência de um "Secret"
+# Se o secret existir, estamos na nuvem.
+IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets
+
+# Só mostra o botão do microfone se NÃO estivermos na nuvem
+if not IS_CLOUD_ENV:
+    if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
+        texto_audio = escutar_audio()
+        if texto_audio != "Não consegui entender o que você disse.":
+            processar_entrada_usuario(texto_audio)
+else:
+    # Opcional: Mostra um aviso útil para o usuário na versão web
+    st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
 
 # --- ÁREA PRINCIPAL DO CHAT ---
 st.write(f"### {active_chat['title']}")
