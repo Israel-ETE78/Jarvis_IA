@@ -1,9 +1,11 @@
+# ==============================================================================
+# === 1. IMPORTAÇÕES DE BIBLIOTECAS
+# ==============================================================================
 import logging
 import streamlit as st
 from openai import OpenAI
 import json
 from difflib import SequenceMatcher
-from PIL import Image
 import fitz  # PyMuPDF
 import docx
 import speech_recognition as sr
@@ -16,28 +18,58 @@ import re
 import base64
 import pandas as pd
 from fpdf import FPDF
-from auth import check_password
+from auth import check_password # Sua autenticação local
 import joblib
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import requests
 
-# --- VERIFICAÇÃO DE LOGIN ---
+
+# ==============================================================================
+# === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
+# ==============================================================================
+
+# Executa a verificação de login primeiro
 if not check_password():
     st.stop()  # Interrompe a execução do script se o login falhar
 
-# --- DEFINIÇÃO DO NOME DE USUÁRIO PARA PREFERÊNCIAS ---
+# Define o nome de usuário para usar nas preferências
 if "username" not in st.session_state:
     st.session_state["username"] = "israel"
 
-# --- Conexão com OpenAI e Funções ---
-#load_dotenv()
-#api_key = os.getenv("OPENAI_API_KEY")
-api_key = st.secrets["OPENAI_API_KEY"]
+
+# ==============================================================================
+# === 3. CONEXÃO INTELIGENTE DE API (LOCAL E NUVEM)
+# ==============================================================================
+
+# Carrega as variáveis do arquivo .env (para o ambiente local)
+load_dotenv()
+
+# Verifica se a chave está nos "Secrets" do Streamlit (quando está na nuvem)
+if "OPENAI_API_KEY" in st.secrets:
+    # Ambiente da Nuvem
+    st.sidebar.success("Chaves de API da Nuvem carregadas!", icon="☁️")
+    api_key = st.secrets["OPENAI_API_KEY"]
+    api_key_serper = st.secrets.get("SERPER_API_KEY") # Usamos .get() para não dar erro se não existir
+else:
+    # Ambiente Local
+    st.sidebar.info("Chaves de API Locais (.env) carregadas!", icon="💻")
+    api_key = os.getenv("OPENAI_API_KEY")
+    api_key_serper = os.getenv("SERPER_API_KEY")
+
+# Validação para garantir que a chave de API foi carregada
+if not api_key:
+    st.error("Chave de API da OpenAI não encontrada! Verifique seu arquivo .env ou os Secrets na nuvem.")
+    st.stop()
+
+# Inicializa o modelo da OpenAI com a chave correta
 modelo = OpenAI(api_key=api_key)
 
-import logging
+
+# ==============================================================================
+# === 4. CONFIGURAÇÃO DE LOGS
+# ==============================================================================
 
 def setup_logging():
     """Configura o sistema de log para registrar eventos em um arquivo."""
@@ -49,6 +81,14 @@ def setup_logging():
         encoding='utf-8'
     )
 
+# Chame a função uma vez no início do script para configurar
+setup_logging()
+
+
+# ==============================================================================
+# === 5. DEFINIÇÃO DAS FUNÇÕES DO APLICATIVO
+# ==============================================================================
+# O resto do seu código (a partir de @st.cache_resource) começa aqui...
 # Chame a função uma vez no início do script para configurar
 setup_logging()
 
@@ -628,7 +668,7 @@ def buscar_na_internet(pergunta_usuario):
     """
     print(f"Pesquisando na web por: {pergunta_usuario}")
     #api_key_serper = os.getenv("SERPER_API_KEY")
-    api_key_serper = st.secrets["SERPER_API_KEY"]
+    #api_key_serper = st.secrets["SERPER_API_KEY"]
     if not api_key_serper:
         return "ERRO: A chave da API Serper não foi configurada."
 
