@@ -49,7 +49,7 @@ load_dotenv()
 # Verifica se a chave está nos "Secrets" do Streamlit (quando está na nuvem)
 if "OPENAI_API_KEY" in st.secrets:
     # Ambiente da Nuvem
-    st.sidebar.success("Chaves de API da Nuvem carregadas!", icon="☁️")
+    st.sidebar.success("Jarvis Online", icon="☁️")
     api_key = st.secrets["OPENAI_API_KEY"]
     api_key_serper = st.secrets.get("SERPER_API_KEY") # Usamos .get() para não dar erro se não existir
 else:
