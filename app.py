@@ -117,7 +117,7 @@ modelo_embedding, vetores_perguntas, base_de_conhecimento = carregar_modelos_loc
 
 # Exibe a mensagem de status no painel lateral
 if modelo_embedding:
-    st.sidebar.success("Modelo de IA local (avançado) carregado!")
+    st.sidebar.success("Memória ativada.", icon="💾")
 else:
     st.sidebar.error("Arquivos do modelo local não encontrados.")
 
