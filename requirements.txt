@@ -1,28 +1,13 @@
-# Inteligência Artificial e Machine Learning
-openai
-sentence-transformers
-scikit-learn
-numpy
-joblib
-langdetect
-
-# Interface Gráfica e Interação
 streamlit
-SpeechRecognition
-PyAudio
-
-# Manipulação de Arquivos e Dados
-pandas
-openpyxl # Necessário para o Pandas ler arquivos .xlsx
-PyMuPDF # Para a biblioteca fitz
-python-docx
-fpdf2 # Versão mais moderna e mantida da FPDF
-
-# Comunicação e APIs
-requests
-
-# Utilitários
+openai
 python-dotenv
-
-# NOTA: PyAudio pode ser necessário para o SpeechRecognition e sua instalação
-# pode variar dependendo do sistema operacional. Veja o README.
+pandas
+openpyxl
+PyMuPDF
+python-docx
+fpdf2
+requests
+joblib
+numpy
+scikit-learn
+sentence-transformers
