@@ -1,0 +1,16 @@
+#[ui]
+#hideSidebarNav = true
+
+[server]
+# Diz ao zelador (Streamlit) para ignorar esses arquivos e pastas
+# ao procurar por mudanças no código. Isso libera o "limite de vigias".
+folderWatchBlacklist = [
+    "jarvis_log.txt",           # Seu arquivo de log
+    "memoria_jarvis.json",      # Sua memória principal
+    "preferencias_*.json",      # Arquivos de preferência de usuários (o * é para "qualquer coisa aqui")
+    "chats_historico_*.json",   # Arquivos de histórico de chat (o * é para "qualquer coisa aqui")
+    "vetores_perguntas_v2.npy", # Arquivo do seu modelo de memória
+    "dados_conhecimento_v2.joblib", # Outro arquivo do seu modelo de memória
+    "__pycache__/",             # Pasta de cache do Python (não precisa vigiar)
+    ".git/"                     # Pasta do Git (não precisa vigiar)
+]

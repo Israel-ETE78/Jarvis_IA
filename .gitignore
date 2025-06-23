@@ -15,4 +15,4 @@ __pycache__/
 # CUIDADO: Se seu jarvis_log.txt for importante, remova a linha acima.
 
 # Arquivos do Streamlit
-.streamlit/
+.streamlit/secrets.toml
