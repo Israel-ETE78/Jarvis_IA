@@ -3,6 +3,19 @@ import json
 import os
 from auth import check_password
 
+# pages/1_Gerenciar_Memoria.py
+import streamlit as st
+from auth_admin_pages import require_admin_access # Import the new function
+
+# === IMPORTANT: Apply the admin access check at the very beginning ===
+require_admin_access()
+
+st.title("Gerenciador da Memória de Longo Prazo")
+st.write("Conteúdo exclusivo para administradores da memória.")
+
+# ... rest of your existing code for managing long-term memory ...
+# (e.g., joblib.load, displaying memory content, forms for adding/editing)
+
 # --- VERIFICAÇÃO DE LOGIN ---
 if not check_password():
     st.stop() # Interrompe a execução do script se o login falhar

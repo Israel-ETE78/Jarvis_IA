@@ -1,5 +1,3 @@
-# auth.py
-
 import streamlit as st
 
 def check_password():
@@ -16,12 +14,12 @@ def check_password():
         submitted = st.form_submit_button("Entrar")
 
         if submitted:
-            correct_username = st.secrets.get("APP_USERNAME", "")
-            correct_password = st.secrets.get("APP_PASSWORD", "")
-
-            if username_input == correct_username and password_input == correct_password:
+            # Pega o dicionário de usuários dos Secrets.
+            users_credentials = st.secrets.get("users", {})
+            
+            # Verifica se o usuário digitado existe e se a senha corresponde
+            if username_input in users_credentials and users_credentials[username_input] == password_input:
                 st.session_state["authenticated"] = True
-                # NOVO: Guarda o nome do usuário na sessão após o login
                 st.session_state["username"] = username_input 
                 st.rerun()
             else:

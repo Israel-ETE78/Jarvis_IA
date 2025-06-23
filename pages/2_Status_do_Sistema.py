@@ -9,6 +9,19 @@ import subprocess
 import time
 from dotenv import load_dotenv
 
+# pages/2_Status_do_Sistema.py
+import streamlit as st
+from auth_admin_pages import require_admin_access # Import the new function
+
+# === IMPORTANT: Apply the admin access check at the very beginning ===
+require_admin_access()
+
+st.title("Painel de Diagnóstico do Jarvis")
+st.write("Informações de diagnóstico exclusivas para administradores.")
+
+# ... rest of your existing code for displaying system status ...
+# (e.g., logging display, system metrics)
+
 # --- CAMINHO ROBUSTO PARA A RAIZ DO PROJETO ---
 # Isso garante que sempre encontraremos os arquivos na pasta principal
 # __file__ se refere a este arquivo atual (2_Status_do_Sistema.py)

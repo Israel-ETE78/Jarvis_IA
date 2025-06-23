@@ -25,18 +25,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import requests
 
-
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
+ADMIN_USERNAME = "israel"
 # ==============================================================================
 
 # Executa a verificação de login primeiro
 if not check_password():
     st.stop()  # Interrompe a execução do script se o login falhar
-
-# Define o nome de usuário para usar nas preferências
-if "username" not in st.session_state:
-    st.session_state["username"] = "israel"
 
 
 # ==============================================================================
@@ -54,7 +50,7 @@ if "OPENAI_API_KEY" in st.secrets:
     api_key_serper = st.secrets.get("SERPER_API_KEY") # Usamos .get() para não dar erro se não existir
 else:
     # Ambiente Local
-    st.sidebar.info("Chaves de API Locais (.env) carregadas!", icon="💻")
+    st.sidebar.info("Jarvis Online", icon="☁️")
     api_key = os.getenv("OPENAI_API_KEY")
     api_key_serper = os.getenv("SERPER_API_KEY")
 
@@ -344,16 +340,28 @@ def processar_comando_lembrese(texto_do_comando):
         st.error(f"Ocorreu um erro ao tentar memorizar a preferência: {e}")
 
 
-def carregar_chats():
+# NOVO carregar_chats
+def carregar_chats(username):
+    """Carrega os chats de um arquivo JSON específico do usuário."""
+    if not username:
+        return {} # Retorna um dicionário vazio se não houver nome de usuário
+
+    filename = f"chats_historico_{username}.json"
     try:
-        with open("chats_historico.json", "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+        return {} # Se o arquivo do usuário não existir, retorna um histórico vazio.
 
 
-def salvar_chats():
-    with open("chats_historico.json", "w", encoding="utf-8") as f:
+# NOVO salvar_chats
+def salvar_chats(username):
+    """Salva os chats do usuário em um arquivo JSON específico para ele."""
+    if not username:
+        return # Não faz nada se não houver um nome de usuário
+
+    filename = f"chats_historico_{username}.json"
+    with open(filename, "w", encoding="utf-8") as f:
         json.dump(st.session_state.chats, f, ensure_ascii=False, indent=4)
 
 
@@ -553,7 +561,7 @@ def processar_entrada_usuario(prompt_usuario):
         "content": dict_resposta["texto"],
         "origem": dict_resposta["origem"]
     })
-    salvar_chats()
+    salvar_chats(st.session_state["username"])
     st.rerun()
 
 
@@ -716,7 +724,7 @@ def create_new_chat():
         "resumo_curto_prazo": ""  # NOVO: Campo para a memória de curto prazo
     }
     st.session_state.current_chat_id = chat_id
-    # A função salvar_chats() será chamada na interface, se necessário
+    
     return chat_id
 
 
@@ -733,13 +741,13 @@ def delete_chat(chat_id_to_delete):
         if st.session_state.current_chat_id == chat_id_to_delete:
             st.session_state.current_chat_id = list(
                 st.session_state.chats.keys())[-1]
-        salvar_chats()
+        salvar_chats(st.session_state["username"])
     st.rerun()
 
 
 # --- INICIALIZAÇÃO E SIDEBAR ---
 if "chats" not in st.session_state:
-    st.session_state.chats = carregar_chats()
+    st.session_state.chats = carregar_chats(st.session_state["username"])
     if not st.session_state.chats:
         create_new_chat()
     if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
@@ -752,6 +760,25 @@ active_chat = st.session_state.chats[chat_id]
 with st.sidebar:
     st.write("### 🤖 Jarvis IA")
 
+    # --- NAVEGAÇÃO CUSTOMIZADA DA SIDEBAR ---
+    st.sidebar.title("Navegação")
+    
+    # Link para a página principal, visível para todos
+    st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
+
+    # Verifica se o usuário logado é o admin para mostrar as páginas restritas
+    #if st.session_state.get("username") == ADMIN_USERNAME:
+      #  st.sidebar.divider()
+       # st.sidebar.header("Painel do Admin")
+        
+        # Links para as páginas de admin, usando os nomes exatos dos seus arquivos
+       # st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
+       # st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
+    
+    st.sidebar.divider()
+    
+    # --- AÇÕES E HISTÓRICO ---
+    
     # Seção de Ações Principais
     if st.button("➕ Novo Chat", use_container_width=True, type="primary"):
         create_new_chat()
@@ -761,49 +788,55 @@ with st.sidebar:
         "🔊 Ouvir respostas do Jarvis", value=False, key="voz_ativada")
     st.divider()
 
-    # Seção do Histórico de Chats (agora em posição de destaque)
+    # Seção do Histórico de Chats
     st.write("#### Histórico de Chats")
-    for id, chat_data in reversed(list(st.session_state.chats.items())):
-        col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
-        with col1:
-            if st.button(chat_data["title"], key=f"chat_{id}", use_container_width=True, type="secondary" if id != chat_id else "primary"):
-                switch_chat(id)
-                st.rerun()
-        with col2:
-            with st.popover("✏️", use_container_width=True):
-                st.text_input(
-                    "Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
-                if st.button("Salvar", key=f"save_rename_{id}"):
-                    st.session_state.chats[id][
-                        "title"] = st.session_state[f"rename_input_{id}"]
-                    salvar_chats()
+    # Garante que o st.session_state.chats existe antes de iterar
+    if "chats" in st.session_state:
+        for id, chat_data in reversed(list(st.session_state.chats.items())):
+            col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
+            with col1:
+                if st.button(chat_data["title"], key=f"chat_{id}", use_container_width=True, type="secondary" if id != st.session_state.current_chat_id else "primary"):
+                    switch_chat(id)
                     st.rerun()
-        with col3:
-            with st.popover("🗑️", use_container_width=True):
-                st.write(
-                    f"Tem certeza que deseja excluir '{chat_data['title']}'?")
-                if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
-                    delete_chat(id)
+            with col2:
+                with st.popover("✏️", use_container_width=True):
+                    new_title = st.text_input(
+                        "Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
+                    if st.button("Salvar", key=f"save_rename_{id}"):
+                        st.session_state.chats[id]["title"] = new_title
+                        salvar_chats(st.session_state["username"])
+                        st.rerun()
+            with col3:
+                with st.popover("🗑️", use_container_width=True):
+                    st.write(
+                        f"Tem certeza que deseja excluir '{chat_data['title']}'?")
+                    if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
+                        delete_chat(id)
     st.divider()
 
-    # Seção para Anexar Arquivos (separada e opcional)
+    # Seção para Anexar Arquivos
     with st.expander("📂 Anexar Arquivos"):
         tipos_aceitos = ["pdf", "docx", "txt", "xlsx", "xls"]
+        # Usa um chat_id como parte da chave para garantir que o uploader reinicie com o chat
+        chat_id_for_key = st.session_state.current_chat_id
+        
         arquivo = st.file_uploader(
-            "📄 Documento ou Planilha", type=tipos_aceitos, key=f"uploader_doc_{chat_id}")
-        if arquivo and arquivo.name != active_chat.get("processed_file_name"):
-            active_chat["contexto_arquivo"] = extrair_texto_documento(arquivo)
-            active_chat["processed_file_name"] = arquivo.name
-            salvar_chats()
+            "📄 Documento ou Planilha", type=tipos_aceitos, key=f"uploader_doc_{chat_id_for_key}")
+        if arquivo and arquivo.name != st.session_state.chats[chat_id_for_key].get("processed_file_name"):
+            st.session_state.chats[chat_id_for_key]["contexto_arquivo"] = extrair_texto_documento(arquivo)
+            st.session_state.chats[chat_id_for_key]["processed_file_name"] = arquivo.name
+            salvar_chats(st.session_state["username"])
             st.rerun()
+
         imagem = st.file_uploader(
-            "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id}")
-        if imagem and imagem.name != active_chat.get("processed_file_name"):
+            "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id_for_key}")
+        if imagem and imagem.name != st.session_state.chats[chat_id_for_key].get("processed_file_name"):
             st.image(imagem, width=200)
-            active_chat["contexto_arquivo"] = analisar_imagem(imagem)
-            active_chat["processed_file_name"] = imagem.name
-            salvar_chats()
+            st.session_state.chats[chat_id_for_key]["contexto_arquivo"] = analisar_imagem(imagem)
+            st.session_state.chats[chat_id_for_key]["processed_file_name"] = imagem.name
+            salvar_chats(st.session_state["username"])
             st.rerun()
+            
         if active_chat.get("contexto_arquivo"):
             st.info("Jarvis está em 'Modo de Análise de Dados'.")
             st.text_area("Conteúdo extraído:",
@@ -837,9 +870,9 @@ for i, mensagem in enumerate(active_chat["messages"]):
         else:
             st.write(mensagem["content"])
 
-        # Lógica correta e indentada para os botões de curadoria
-        # Verifica se a mensagem veio da OpenAI e ainda não foi curada
-        if mensagem.get("origem") == "openai":
+# ... no loop principal de chat
+# Verifica se a mensagem veio da OpenAI E SE o usuário logado é o admin
+        if mensagem.get("origem") == "openai" and st.session_state.get("username") == ADMIN_USERNAME:
             # Pega a pergunta do usuário que gerou esta resposta
             pergunta_original = active_chat["messages"][i-1]["content"]
             resposta_original = mensagem["content"]
@@ -852,7 +885,7 @@ for i, mensagem in enumerate(active_chat["messages"]):
                 if st.button("✅", key=f"save_{i}", help="Salvar resposta na memória"):
                     adicionar_a_memoria(pergunta_original, resposta_original)
                     mensagem["origem"] = "openai_curado"
-                    salvar_chats()
+                    salvar_chats(st.session_state["username"])
                     st.rerun()
 
             # Coluna 2: Botão Editar (com Popover)
@@ -869,7 +902,7 @@ for i, mensagem in enumerate(active_chat["messages"]):
                             adicionar_a_memoria(
                                 pergunta_editada, resposta_editada)
                             mensagem["origem"] = "openai_curado"
-                            salvar_chats()
+                            salvar_chats(st.session_state["username"])
                             st.rerun()
 
 # Lógica de Text-to-Speech (continua aqui)
@@ -888,7 +921,7 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
             </script>
             """, height=0)
             active_chat["ultima_mensagem_falada"] = resposta_ia
-            salvar_chats()
+            salvar_chats(st.session_state["username"])
 
 if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant" and voz_ativada:
     if active_chat["messages"][-1].get("type") == "text":
@@ -905,7 +938,7 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
             </script>
             """, height=0)
             active_chat["ultima_mensagem_falada"] = resposta_ia
-            salvar_chats()
+            salvar_chats(st.session_state["username"])
 
 # --- ENTRADA DE TEXTO DO USUÁRIO ---
 if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf..."):
@@ -915,7 +948,7 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
         {"role": "user", "type": "text", "content": prompt_usuario})
 
     # Salva o chat imediatamente após adicionar a mensagem do usuário
-    salvar_chats()
+    salvar_chats(st.session_state["username"])
 
     # --- PROCESSAMENTO DE COMANDOS ESPECIAIS ---
     if prompt_usuario.lower().startswith("/lembrese "):
@@ -936,7 +969,7 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
                     # Adiciona a imagem gerada ao histórico
                     active_chat["messages"].append(
                         {"role": "assistant", "type": "image", "content": url_da_imagem, "prompt": prompt_da_imagem})
-                    salvar_chats()
+                    salvar_chats(st.session_state["username"])
         st.rerun()
 
     elif prompt_usuario.lower().startswith("/pdf "):
@@ -955,7 +988,7 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
             # Adiciona a confirmação ao histórico
             active_chat["messages"].append(
                 {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{topico_pdf}'. O botão de download foi exibido acima."})
-            salvar_chats()
+            salvar_chats(st.session_state["username"])
         st.rerun()
 
     else:
