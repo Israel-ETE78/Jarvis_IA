@@ -779,14 +779,18 @@ def switch_chat(chat_id):
 def delete_chat(chat_id_to_delete):
     if chat_id_to_delete in st.session_state.chats:
         del st.session_state.chats[chat_id_to_delete]
-    if not st.session_state.chats:
-        create_new_chat()
-    else:
+        
+        # Se o chat deletado era o chat atual, mude para outro chat ou crie um novo
         if st.session_state.current_chat_id == chat_id_to_delete:
-            st.session_state.current_chat_id = list(
-                st.session_state.chats.keys())[-1]
+            if st.session_state.chats: # Se ainda existirem outros chats
+                st.session_state.current_chat_id = list(st.session_state.chats.keys())[-1]
+            else: # Se não houver mais chats, crie um novo
+                create_new_chat()
+        
+        # Garante que o estado atualizado seja salvo no arquivo
         salvar_chats(st.session_state["username"])
-    st.rerun()
+        
+        st.rerun() # Recarrega a aplicação para refletir a mudança
 
 
 # --- INICIALIZAÇÃO E SIDEBAR ---

@@ -1,40 +1,9 @@
 {
-    "20250622_222317_408568": {
-        "title": "Nova Conve",
-        "messages": [
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi! Como posso ajudá-lo hoje?",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Meu nome é Járvis.",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Disponível para o próximo comando.",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi! Como posso ajudá-lo hoje?",
-                "origem": "openai"
-            }
-        ],
+    "20250623_180859_010259": {
+        "title": "Nova Conversa",
+        "messages": [],
         "contexto_arquivo": "",
-        "ultima_mensagem_falada": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+        "ultima_mensagem_falada": null,
         "processed_file_name": null,
         "resumo_curto_prazo": ""
     }
