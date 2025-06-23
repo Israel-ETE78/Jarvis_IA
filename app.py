@@ -27,7 +27,10 @@ import requests
 
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
-ADMIN_USERNAME = "israel"
+ADMIN_USERNAME = st.secrets.get("ADMIN_USERNAME", os.getenv("ADMIN_USERNAME"))
+if not ADMIN_USERNAME:
+    st.error("Nome de usuário admin não encontrado! Defina ADMIN_USERNAME em .env ou secrets.")
+    st.stop()
 # ==============================================================================
 
 # Executa a verificação de login primeiro
