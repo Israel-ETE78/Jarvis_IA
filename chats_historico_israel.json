@@ -1,84 +1,10 @@
 {
-    "20250622_233524_655340": {
+    "20250623_134739_641929": {
         "title": "Nova Conversa",
-        "messages": [
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi! Como posso ajudá-lo hoje?",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Pronto. Pronta para a próxima ação.",
-                "origem": "local"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Boa noite! Espero que esteja tudo bem com você. Como posso ajudar?",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "oi"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi! Como posso ajudá-lo hoje?",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "carro"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Você poderia me dar mais detalhes sobre o que gostaria de saber ou discutir sobre carros? Assim posso ajudar da melhor forma!",
-                "origem": "openai"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "carro"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Certo! Carros são um assunto amplo. Você está pensando em comprar um carro novo, precisa de informações sobre manutenção, ou tem alguma dúvida específica? Estou aqui para ajudar.",
-                "origem": "openai"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "carro"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Você que comprar um carro?",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "oi"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
-                "origem": "local"
-            }
-        ],
+        "messages": [],
         "contexto_arquivo": "",
-        "ultima_mensagem_falada": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+        "ultima_mensagem_falada": null,
         "processed_file_name": null,
-        "resumo_curto_prazo": "\"O usuário mencionou 'carro', mas não forneceu detalhes específicos sobre o que gostaria de discutir.\""
+        "resumo_curto_prazo": ""
     }
 }

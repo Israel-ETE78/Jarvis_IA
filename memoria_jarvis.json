@@ -477,5 +477,16 @@
                 }
             ]
         }
+    ],
+    "turismo.": [
+        {
+            "pergunta": "dicas de férias para alagoas",
+            "respostas": [
+                {
+                    "texto": "Alagoas é um destino incrível e oferece muitas opções bacanas para as férias! Aqui estão algumas dicas:\n\n1. **Maceió**: A capital tem praias urbanas lindas, como Ponta Verde e Pajuçara, onde você pode fazer passeios de jangada e aproveitar as feirinhas de artesanato.\n\n2. **Maragogi**: Conhecida como o \"Caribe Brasileiro\", Maragogi é famosa pelas suas piscinas naturais e águas cristalinas. Não perca os passeios de catamarã até as galés nos recifes de corais.\n\n3. **São Miguel dos Milagres**: Esse é um destino perfeito se você quer sossego, com praias paradisíacas e menos movimentadas. Pode também explorar a Rota Ecológica, com praias como Toque e Patacho.\n\n4. **Dunas de Marapé**: Um belo passeio para quem curte ecoturismo, combinando praias, mangues e dunas. Você pode conhecer o encontro do rio com o mar.\n\n5. **Praia do Gunga**: Famosa por suas falésias coloridas, passeios de buggy e a vista deslumbrante do mirante.\n\nSe precisar de mais informações ou tiver outra curiosidade sobre Alagoas, é só me avisar! 😊",
+                    "tom": "neutro"
+                }
+            ]
+        }
     ]
 }

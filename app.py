@@ -146,7 +146,7 @@ def criar_pdf(texto, topico):
 
 
 def extrair_texto_documento(uploaded_file):
-    """Extrai o texto de arquivos PDF, DOCX, TXT e Excel."""
+    """Extrai o texto de arquivos PDF, DOCX, TXT, Excel, e várias linguagens de programação e scripts de banco de dados."""
     nome_arquivo = uploaded_file.name
 
     if nome_arquivo.endswith(('.xlsx', '.xls')):
@@ -166,6 +166,47 @@ def extrair_texto_documento(uploaded_file):
         return "\n".join([p.text for p in doc.paragraphs])
     elif nome_arquivo.endswith(".txt"):
         return uploaded_file.read().decode("utf-8")
+    # --- Modificação ABRANGENTE para arquivos de programação e script ---
+    elif nome_arquivo.endswith((
+        '.py',      # Python
+        '.js',      # JavaScript
+        '.ts',      # TypeScript
+        '.html',    # HTML
+        '.htm',     # HTML
+        '.css',     # CSS
+        '.php',     # PHP
+        '.java',    # Java
+        '.kt',      # Kotlin
+        '.c',       # C
+        '.cpp',     # C++
+        '.h',       # C/C++ Header
+        '.cs',      # C#
+        '.rb',      # Ruby
+        '.go',      # Go
+        '.swift',   # Swift
+        '.sql',     # SQL (for MySQL, PostgreSQL, etc.)
+        '.json',    # JSON
+        '.xml',     # XML
+        '.yaml',    # YAML
+        '.yml',     # YAML
+        '.md',      # Markdown
+        '.sh',      # Shell Script
+        '.bat',     # Batch Script
+        '.ps1',     # PowerShell Script
+        '.R',       # R
+        '.pl',      # Perl
+        '.lua'      # Lua
+        # Adicione mais extensões conforme necessário
+    )):
+        try:
+            # Tenta UTF-8 primeiro, que é o mais comum para código
+            return uploaded_file.read().decode("utf-8")
+        except UnicodeDecodeError:
+            # Se UTF-8 falhar, tenta Latin-1 (ou outra codificação comum no seu contexto)
+            return uploaded_file.read().decode("latin-1")
+        except Exception as e:
+            return f"Erro ao ler o arquivo de código/script: {e}"
+    # --- FIM da modificação ---
     return "Formato de arquivo não suportado."
 
 
@@ -762,7 +803,7 @@ with st.sidebar:
 
     # --- NAVEGAÇÃO CUSTOMIZADA DA SIDEBAR ---
     st.sidebar.title("Navegação")
-    
+
     # Link para a página principal, visível para todos
     st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
 
@@ -816,12 +857,21 @@ with st.sidebar:
 
     # Seção para Anexar Arquivos
     with st.expander("📂 Anexar Arquivos"):
-        tipos_aceitos = ["pdf", "docx", "txt", "xlsx", "xls"]
+        # ATUALIZE ESTA LISTA COM AS NOVAS EXTENSÕES PARA O FILE_UPLOADER
+        tipos_aceitos = [
+            "pdf", "docx", "txt", "xlsx", "xls",
+            "py", "js", "ts", "html", "htm", "css", "php", "java", "kt",
+            "c", "cpp", "h", "cs", "rb", "go", "swift", "sql", "json",
+            "xml", "yaml", "yml", "md", "sh", "bat", "ps1", "R", "pl", "lua"
+        ]
         # Usa um chat_id como parte da chave para garantir que o uploader reinicie com o chat
         chat_id_for_key = st.session_state.current_chat_id
         
         arquivo = st.file_uploader(
-            "📄 Documento ou Planilha", type=tipos_aceitos, key=f"uploader_doc_{chat_id_for_key}")
+            "📄 Documento, Planilha ou Arquivo de Código", # Rótulo do uploader
+            type=tipos_aceitos, # <-- AGORA USARÁ A LISTA COMPLETA
+            key=f"uploader_doc_{chat_id_for_key}"
+        )
         if arquivo and arquivo.name != st.session_state.chats[chat_id_for_key].get("processed_file_name"):
             st.session_state.chats[chat_id_for_key]["contexto_arquivo"] = extrair_texto_documento(arquivo)
             st.session_state.chats[chat_id_for_key]["processed_file_name"] = arquivo.name
@@ -844,19 +894,20 @@ with st.sidebar:
             if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_{chat_id}"):
                 create_new_chat()
                 st.rerun()
-# Detecta se estamos na nuvem verificando a existência de um "Secret"
-# Se o secret existir, estamos na nuvem.
-IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets
+    
+    # Detecta se estamos na nuvem verificando a existência de um "Secret"
+    # Se o secret existir, estamos na nuvem.
+    IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets # This line is correct
 
-# Só mostra o botão do microfone se NÃO estivermos na nuvem
-if not IS_CLOUD_ENV:
-    if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
-        texto_audio = escutar_audio()
-        if texto_audio != "Não consegui entender o que você disse.":
-            processar_entrada_usuario(texto_audio)
-else:
-    # Opcional: Mostra um aviso útil para o usuário na versão web
-    st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
+    # SÓ MOSTRA O BOTÃO DO MICROFONE AQUI DENTRO DO `with st.sidebar:`
+    if not IS_CLOUD_ENV:
+        if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
+            texto_audio = escutar_audio()
+            if texto_audio != "Não consegui entender o que você disse.":
+                processar_entrada_usuario(texto_audio)
+    else:
+        # Opcional: Mostra um aviso útil para o usuário na versão web
+        st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
 
 # --- ÁREA PRINCIPAL DO CHAT ---
 st.write(f"### {active_chat['title']}")
