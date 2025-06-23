@@ -178,6 +178,24 @@
                     "tom": "neutro"
                 }
             ]
+        },
+        {
+            "pergunta": "oi",
+            "respostas": [
+                {
+                    "texto": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+                    "tom": "neutro"
+                }
+            ]
+        },
+        {
+            "pergunta": "carro",
+            "respostas": [
+                {
+                    "texto": "Você que comprar um carro?",
+                    "tom": "neutro"
+                }
+            ]
         }
     ],
     "sugestão.": [
@@ -295,28 +313,10 @@
     "solicitação de tarefa.": [],
     "sentimentos.": [
         {
-            "pergunta": "olá , quem é vc?",
-            "respostas": [
-                {
-                    "texto": "Olá! Eu sou Jarvis, seu assistente virtual. Estou aqui para ajudar com suas dúvidas e fornecer informações úteis. Como posso ajudá-lo hoje?",
-                    "tom": "neutro"
-                }
-            ]
-        },
-        {
             "pergunta": "boa taede",
             "respostas": [
                 {
                     "texto": "Boa tarde! Como posso ajudar você hoje?",
-                    "tom": "neutro"
-                }
-            ]
-        },
-        {
-            "pergunta": "oi",
-            "respostas": [
-                {
-                    "texto": "Oi! Como posso ajudá-lo hoje?",
                     "tom": "neutro"
                 }
             ]
@@ -392,38 +392,7 @@
             ]
         }
     ],
-    "tecnologia": [
-        {
-            "pergunta": "jarvis",
-            "respostas": [
-                {
-                    "texto": "Olá! Como posso ajudar você hoje?",
-                    "tom": "neutro"
-                }
-            ]
-        }
-    ],
-    "saudação.": [
-        {
-            "pergunta": "oi",
-            "respostas": [
-                {
-                    "texto": "Olá! Como posso ajudar você hoje?",
-                    "tom": "neutro"
-                }
-            ]
-        }
-    ],
     "sentimentos": [
-        {
-            "pergunta": "Boa noite",
-            "respostas": [
-                {
-                    "texto": "Boa noite! Espero que esteja tudo bem com você. Como posso ajudar?",
-                    "tom": "neutro"
-                }
-            ]
-        },
         {
             "pergunta": "bom dia",
             "respostas": [
