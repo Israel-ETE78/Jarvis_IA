@@ -1,7 +1,41 @@
 {
-    "20250623_134739_641929": {
+    "20250623_171608_503822": {
         "title": "Nova Conversa",
-        "messages": [],
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "oi"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+                "origem": "local"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "qual o seu nome"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Meu nome é Járvis.",
+                "origem": "local"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "qual o seu proposito?"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Ajudar você com informações, responder perguntas e facilitar suas tarefas diárias. Estou aqui para tornar sua vida mais fácil e produtiva.",
+                "origem": "local"
+            }
+        ],
         "contexto_arquivo": "",
         "ultima_mensagem_falada": null,
         "processed_file_name": null,
