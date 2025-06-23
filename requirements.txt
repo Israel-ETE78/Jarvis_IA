@@ -11,3 +11,4 @@ joblib
 numpy
 scikit-learn
 sentence-transformers
+SpeechRecognition
