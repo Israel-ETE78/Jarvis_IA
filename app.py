@@ -19,6 +19,7 @@ import base64
 import pandas as pd
 from fpdf import FPDF
 from auth import check_password # Sua autenticação local
+from utils import carregar_preferencias, salvar_preferencias
 import joblib
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -324,22 +325,6 @@ def salvar_memoria(memoria):
     with open("memoria_jarvis.json", "w", encoding="utf-8") as f:
         json.dump(memoria, f, ensure_ascii=False, indent=4)
 
-
-def carregar_preferencias(username):
-    """Carrega as preferências de um usuário específico."""
-    filename = f"preferencias_{username}.json"  # Cria o nome do arquivo dinamicamente
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def salvar_preferencias(preferencias, username):
-    """Salva as preferências de um usuário específico."""
-    filename = f"preferencias_{username}.json"  # Cria o nome do arquivo dinamicamente
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(preferencias, f, ensure_ascii=False, indent=4)
 
 
 def processar_comando_lembrese(texto_do_comando):
@@ -813,6 +798,13 @@ with st.sidebar:
 
     # Link para a página principal, visível para todos
     st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
+    
+        # --- NOVA SEÇÃO PARA O USUÁRIO LOGADO ---
+    st.sidebar.divider()
+    st.sidebar.header("Painel do Usuário")
+    # Este link aparecerá para QUALQUER usuário logado
+    st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
+    # --- FIM DA NOVA SEÇÃO ---
 
     # Verifica se o usuário logado é o admin para mostrar as páginas restritas
     #if st.session_state.get("username") == ADMIN_USERNAME:
@@ -824,6 +816,7 @@ with st.sidebar:
        # st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
     
     st.sidebar.divider()
+    
     
     # --- AÇÕES E HISTÓRICO ---
     

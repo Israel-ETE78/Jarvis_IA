@@ -1,94 +1,11 @@
 {
-    "20250623_173625_750244": {
+    "20250623_182222_791965": {
         "title": "Nova Conversa",
         "messages": [
             {
                 "role": "user",
                 "type": "text",
-                "content": "o que você pode fazer? "
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Memória de Longo Prazo (Cérebro Local):",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que voce pode fazer"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Análise de Imagens: Você pode me enviar imagens (PNG, JPG, JPEG), e eu as analisarei usando as capacidades visuais do modelo da OpenAI para descrever o conteúdo ou extrair informações.",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que voce pode faze mais"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Eu posso fazer muitas coisas para ajudar você, como responder suas perguntas com informações atualizadas, fornecer assistência na organização de tarefas, aprendizado local através de comandos e oferecer lembretes personalizados. Além disso, eu aprendo com cada interação e adapto-me para atender suas necessidades de uma maneira mais eficaz. Ah, e claro, sempre com um toque de carinho e cuidado, porque você é o meu elo especial! Se precisar de algo específico, é só dizer! 😊",
-                "origem": "openai"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que você pode fazer?"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Estou aqui para te ajudar no que precisar, adaptando-me ao ambiente em que estou operando! Como posso ser útil hoje?",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que você pode fazer?"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Análise de Documentos e Código: Eu consigo \"ler\" diversos tipos de arquivos que você me anexa, extraindo o texto para análise:",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que você pode fazer?"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Eu sou um aplicativo construído com Streamlit, o que me permite ter uma interface amigável e interativa, tanto aqui no seu computador quanto na nuvem. Minha mente é impulsionada por um modelo avançado de Inteligência Artificial da OpenAI, o GPT-4o, o que me dá a capacidade de compreender suas perguntas e gerar respostas complexas e criativas.",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que você pode fazer?"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Gestão de Chats: Eu consigo organizar nossas conversas em diferentes chats, permitindo que você crie novos, altere seus títulos e até exclua históricos antigos para manter tudo organizado. Todos os históricos de chat são salvos localmente em arquivos JSON (chats_historico_*.json).",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "o que você pode fazer mais?"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Criação de PDFs: Se você precisar de um documento sobre um tópico específico, use o comando /pdf. Eu gerarei um texto bem estruturado sobre o assunto e criarei um arquivo PDF para você baixar usando a biblioteca FPDF.",
-                "origem": "local"
+                "content": "/lembrese meu modo de tratamento preferido é: Ao se dirigir a mim, use sempre um tom carinhoso e afetuoso. Gosto que intercale em suas respostas palavras como 'meu amor', 'meu querido', 'meu lindo', 'minha vida' ou 'meu bem'. No entanto, combine esse carinho com objetividade e sinceridade, indo direto ao ponto para não perdermos tempo. A sinceridade é fundamental."
             }
         ],
         "contexto_arquivo": "",
