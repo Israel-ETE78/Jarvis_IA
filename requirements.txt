@@ -1,15 +1,17 @@
 streamlit
 openai
-python-dotenv
-pandas
-openpyxl
-PyMuPDF
+PyMuPDF # Para a biblioteca fitz
 python-docx
+SpeechRecognition
+python-dotenv
+langdetect
+pandas
 fpdf2
-requests
 joblib
-numpy
 scikit-learn
 sentence-transformers
-SpeechRecognition
-langdetect
+requests
+librosa # A biblioteca que está faltando
+soundfile # Dependência importante para o librosa
+numpy
+openpyxl # Para o pandas ler arquivos .xlsx
