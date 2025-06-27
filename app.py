@@ -25,7 +25,10 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import requests
-
+import librosa
+import io
+import soundfile
+from fpdf.enums import XPos, YPos
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
 ADMIN_USERNAME = st.secrets.get("ADMIN_USERNAME", os.getenv("ADMIN_USERNAME"))
@@ -123,6 +126,12 @@ else:
 
 # --- Funções do Aplicativo ---
 
+def limpar_pdf_da_memoria():
+    """Remove os dados do PDF do st.session_state para o botão de download desaparecer."""
+    if 'pdf_para_download' in st.session_state:
+        del st.session_state['pdf_para_download']
+    if 'pdf_filename' in st.session_state:
+        del st.session_state['pdf_filename']
 
 def gerar_conteudo_para_pdf(topico):
     """Usa a IA para gerar um texto bem formatado sobre um tópico para o PDF."""
@@ -136,18 +145,81 @@ def gerar_conteudo_para_pdf(topico):
     return resposta_modelo.choices[0].message.content
 
 
-def criar_pdf(texto, topico):
-    """Cria um arquivo PDF em memória a partir de um texto."""
+def criar_pdf(texto_corpo, titulo_documento):
+    """
+    Cria um arquivo PDF em memória, interpretando formatação Markdown
+    e usando uma fonte Unicode local de forma robusta e portatil.
+    """
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, topico.encode(
-        'latin-1', 'replace').decode('latin-1'), 0, 1, 'C')
-    pdf.ln(10)
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, texto.encode('latin-1', 'replace').decode('latin-1'))
+
+    # Constrói o caminho completo e robusto para as fontes
+    script_dir = os.path.dirname(__file__)
+    font_path_regular = os.path.join(script_dir, 'assets', 'DejaVuSans.ttf')
+    font_path_bold = os.path.join(script_dir, 'assets', 'DejaVuSans-Bold.ttf')
+
+    try:
+        pdf.add_font('DejaVu', '', font_path_regular)
+        pdf.add_font('DejaVu', 'B', font_path_bold)
+        FONT_FAMILY = 'DejaVu'
+    except FileNotFoundError:
+        print("AVISO: Arquivos de fonte não encontrados. Verifique a pasta 'assets'. Usando Helvetica.")
+        FONT_FAMILY = 'Helvetica'
+
+    # O resto da função continua exatamente igual...
+    pdf.set_font(FONT_FAMILY, 'B', 18)
+    pdf.multi_cell(0, 10, titulo_documento, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+    pdf.ln(15)
+
+    texto_corpo_ajustado = texto_corpo.strip().replace('*\n', '* ').replace('-\n', '- ')
+    linhas = texto_corpo_ajustado.split('\n')
+
+    for linha in linhas:
+        linha = linha.strip()
+        if linha.startswith('### '):
+            pdf.set_font(FONT_FAMILY, 'B', 14)
+            pdf.multi_cell(0, 8, linha.lstrip('### ').strip(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.ln(4)
+        elif linha.startswith('## '):
+            pdf.set_font(FONT_FAMILY, 'B', 16)
+            pdf.multi_cell(0, 10, linha.lstrip('## ').strip(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.ln(6)
+        elif linha.startswith('# '):
+            pdf.set_font(FONT_FAMILY, 'B', 18)
+            pdf.multi_cell(0, 12, linha.lstrip('# ').strip(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.ln(8)
+        elif linha.startswith('**') and linha.endswith('**'):
+            pdf.set_font(FONT_FAMILY, 'B', 12)
+            texto_negrito = linha.strip('**')
+            pdf.multi_cell(0, 7, texto_negrito, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.ln(3)
+        elif linha.startswith('* ') or linha.startswith('- '):
+            pdf.set_font(FONT_FAMILY, '', 12)
+            bullet = "•" if FONT_FAMILY == 'DejaVu' else "*"
+            pdf.cell(8, 7, f"  {bullet} ")
+            texto_da_linha = linha.lstrip('* ').lstrip('- ').strip()
+            write_with_mixed_styles(texto_da_linha, pdf, FONT_FAMILY)
+            pdf.ln(2)
+        elif linha:
+            pdf.set_font(FONT_FAMILY, '', 12)
+            write_with_mixed_styles(linha, pdf, FONT_FAMILY)
+            pdf.ln(5)
+
     return bytes(pdf.output())
 
+def write_with_mixed_styles(text, pdf, font_family):
+    """
+    Escreve uma linha de texto no PDF, alternando entre estilos normal e negrito
+    com base na marcação '**'.
+    """
+    parts = text.split('**')
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            pdf.set_font(font_family, 'B')
+        else:
+            pdf.set_font(font_family, '')
+        pdf.write(7, part)
+    pdf.ln()
 
 def extrair_texto_documento(uploaded_file):
     """Extrai o texto de arquivos PDF, DOCX, TXT, Excel, e várias linguagens de programação e scripts de banco de dados."""
@@ -312,6 +384,58 @@ def preparar_texto_para_fala(texto):
 
     return texto
 
+def extrair_features(data, sample_rate):
+    """
+    Extrai 110 features de dados de áudio para ser compatível com o modelo treinado.
+    """
+    # MFCC (40) -> 40 mean + 40 std = 80 features
+    mfcc = librosa.feature.mfcc(y=data, sr=sample_rate, n_mfcc=40)
+    # Chroma (12) -> 12 mean + 12 std = 24 features
+    chroma = librosa.feature.chroma_stft(y=data, sr=sample_rate)
+    # ZCR -> 1 mean + 1 std = 2 features
+    zcr = librosa.feature.zero_crossing_rate(data)
+    # RMS -> 1 mean + 1 std = 2 features
+    rms = librosa.feature.rms(y=data)
+    # Spectral Centroid -> 1 mean + 1 std = 2 features
+    centroid = librosa.feature.spectral_centroid(y=data, sr=sample_rate)
+    
+    # Total: 80 + 24 + 2 + 2 + 2 = 110 features
+    features = np.hstack([
+        np.mean(mfcc, axis=1), np.std(mfcc, axis=1),
+        np.mean(chroma, axis=1), np.std(chroma, axis=1),
+        np.mean(zcr), np.std(zcr),
+        np.mean(rms), np.std(rms),
+        np.mean(centroid), np.std(centroid)
+    ])
+    return features
+
+def analisar_tom_de_voz(audio_data_wav):
+    """
+    Analisa os dados de áudio WAV para detectar uma emoção usando um modelo pré-treinado.
+    """
+    try:
+        # Carrega o modelo pré-treinado do arquivo
+        modelo = joblib.load("modelo_emocoes_voz.joblib")
+
+        # Converte os dados de áudio em um formato que o librosa possa ler
+        data, sample_rate = soundfile.read(io.BytesIO(audio_data_wav))
+        
+        # Extrai as características do áudio
+        features = extrair_features(data, sample_rate)
+        
+        # Usa o modelo para prever a emoção
+        # O .reshape(1, -1) é necessário para formatar os dados para o modelo
+        resultado = modelo.predict(features.reshape(1, -1))
+        
+        # Retorna a emoção prevista (ex: 'feliz', 'triste', 'neutro')
+        return resultado[0]
+
+    except FileNotFoundError:
+        print("AVISO: Arquivo 'modelo_emocoes_voz.joblib' não encontrado. Análise de tom de voz desativada.")
+        return "neutro" # Retorna neutro se o modelo não for encontrado
+    except Exception as e:
+        print(f"Erro na análise de tom de voz real: {e}")
+        return "neutro" # Retorna um valor seguro em caso de outro erro
 
 def carregar_memoria():
     try:
@@ -414,10 +538,17 @@ def buscar_resposta_local(pergunta_usuario, memoria, limiar=0.9):
     return None
 
 
-def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_contexto=""):
+def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_contexto="", tom_de_voz_detectado=None):
     """
     Decide como responder, considerando memória local, busca na web, preferências e o tom do usuário.
     """
+    # =======================================================
+    # === CORREÇÃO: Definindo a variável no início ===
+    # =======================================================
+    # Detecta o idioma da pergunta do usuário para usar em toda a função
+    idioma_da_pergunta = detectar_idioma(pergunta_usuario)
+    # =======================================================
+
     # ETAPA 1: Tenta responder com a memória local primeiro
     if modelo_embedding:
         try:
@@ -450,10 +581,8 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     # ETAPA 2: Decide se precisa de informações da internet
     if precisa_buscar_na_web(pergunta_usuario):
         
-        # VVVV A NOVA LINHA DE LOG ENTRA AQUI VVVV
         logging.info(f"Iniciando busca na web para a pergunta: '{pergunta_usuario}'")
-        # ^^^^ FIM DA ADIÇÃO ^^^^
-
+        
         st.info("Buscando informações em tempo real na web... 🌐")
         contexto_da_web = buscar_na_internet(pergunta_usuario)
         
@@ -467,10 +596,6 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
         Contexto da Web:
         {contexto_da_web}
         """
-        mensagens_para_api = [
-            {"role": "system", "content": prompt_sistema},
-            {"role": "user", "content": pergunta_usuario}
-        ]
 
     else:
         # ETAPA 3: Se não precisa de busca, usa o fluxo de chat padrão
@@ -478,15 +603,24 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
         st.info("Consultando a OpenAI...")
         
         prompt_sistema = "Você é Jarvis, um assistente prestativo."
+        
+        if tom_de_voz_detectado and tom_de_voz_detectado != "neutro":
+            prompt_sistema += f"\nO tom de voz do usuário parece ser '{tom_de_voz_detectado}'. Adapte sua resposta a isso, sendo mais empático ou cuidadoso se necessário."
         if tom_do_usuario:
-            prompt_sistema += f"\nO tom do usuário parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso (ex: se ele estiver apressado, seja breve; se estiver descontraído, seja mais amigável)."
+            prompt_sistema += f"\nO tom do texto dele parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso (ex: se ele estiver apressado, seja breve; se estiver descontraído, seja mais amigável)."
         if preferencias:
             prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, Israel: {json.dumps(preferencias, ensure_ascii=False)}"
         if resumo_contexto:
             prompt_sistema += f"\nLembre-se também do contexto da conversa atual: {resumo_contexto}"
         
-        mensagens_para_api = [{"role": "system", "content": prompt_sistema}]
-        mensagens_para_api.extend(historico_chat)
+    # =======================================================
+    # === CORREÇÃO: Adicionando a instrução de idioma ao final do prompt ===
+    # =======================================================
+    prompt_sistema += f"\n\nIMPORTANTE: Responda ao usuário final estritamente no seguinte idioma, sem exceções: '{idioma_da_pergunta}'"
+    # =======================================================
+
+    mensagens_para_api = [{"role": "system", "content": prompt_sistema}]
+    mensagens_para_api.extend(historico_chat)
 
     # Chamada final para a OpenAI
     resposta_modelo = modelo.chat.completions.create(
@@ -515,31 +649,44 @@ def analisar_imagem(image_file):
 
 
 def escutar_audio():
+    idioma_para_reconhecimento = st.session_state.get("idioma_fala", "pt-BR")
     recognizer = sr.Recognizer()
     try:
         with sr.Microphone() as source:
-            st.info("Fale agora...")
+            st.info(f"Fale agora (em {idioma_para_reconhecimento})...")
             recognizer.adjust_for_ambient_noise(source)
-            audio = recognizer.listen(source)
+            audio_capturado = recognizer.listen(source)
+
         st.info("Processando áudio...")
+
+        # Etapa 1: Transcrever o texto
         texto_reconhecido = recognizer.recognize_google(
-            audio, language="pt-BR")
+            audio_capturado, language=idioma_para_reconhecimento)
         st.success("Áudio transcrito!")
-        return texto_reconhecido
+
+        # Etapa 2: Analisar o tom de voz
+        tom_de_voz = analisar_tom_de_voz(audio_capturado.get_wav_data())
+        st.info(f"Tom de voz detectado (exemplo): {tom_de_voz}")
+
+        # Etapa 3: Retornar AMBOS os resultados
+        return texto_reconhecido, tom_de_voz
+
     except sr.UnknownValueError:
         st.warning("Não consegui entender o que você disse.")
-        return "Não consegui entender o que você disse."
+        # Retorna DOIS valores em caso de erro
+        return None, None
     except sr.RequestError as e:
-        st.error(
-            f"Não foi possível solicitar resultados do serviço Google; {e}")
-        return "Não consegui entender o que você disse."
+        st.error(f"Não foi possível se conectar ao serviço de reconhecimento; {e}")
+        # Retorna DOIS valores em caso de erro
+        return None, None
     except Exception as e:
         st.error(f"Ocorreu um erro ao acessar o microfone: {e}")
         print(f"ERRO DETALHADO DO MICROFONE: {e}")
-        return "Não consegui entender o que você disse."
+        # Retorna DOIS valores em caso de erro
+        return None, None
 
 
-def processar_entrada_usuario(prompt_usuario):
+def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     chat_id = st.session_state.current_chat_id
     active_chat = st.session_state.chats[chat_id]
 
@@ -560,28 +707,22 @@ def processar_entrada_usuario(prompt_usuario):
     resumo_contexto = active_chat.get("resumo_curto_prazo", "")
 
     # --- LÓGICA DE ANÁLISE DE DOCUMENTOS (REINTEGRADA) ---
-    # Pega o contexto do arquivo que está salvo na sessão do chat
     contexto_do_arquivo = active_chat.get("contexto_arquivo")
 
-    # Se existir um contexto de arquivo, ele terá prioridade
     if contexto_do_arquivo:
-        # Prepara um histórico específico para análise de documentos
         historico_para_analise = [
             {"role": "system", "content": "Você é um assistente especialista em análise de dados e documentos. Responda às perguntas do usuário baseando-se ESTRITAMENTE no conteúdo do documento fornecido abaixo."},
             {"role": "user", "content": f"CONTEÚDO DO DOCUMENTO PARA ANÁLISE:\n---\n{contexto_do_arquivo}\n---"},
             {"role": "assistant", "content": "Entendido. O conteúdo do documento foi carregado. Estou pronto para responder suas perguntas sobre ele."}
         ]
-        # Adiciona a conversa atual ao contexto do documento
         historico_para_analise.extend(historico_chat)
-        # O histórico final enviado para a IA será o de análise
         historico_final = historico_para_analise
     else:
-        # Se não houver arquivo, o histórico final é o de chat normal
         historico_final = historico_chat
 
-    # Chama a função de resposta com o histórico final correto
+    # Chama a função de resposta com o histórico final e o tom da voz
     dict_resposta = responder_com_inteligencia(
-        prompt_usuario, modelo, historico_final, resumo_contexto)
+        prompt_usuario, modelo, historico_final, resumo_contexto, tom_de_voz_detectado=tom_voz)
 
     # Adiciona a resposta da IA ao histórico
     active_chat["messages"].append({
@@ -745,7 +886,7 @@ def create_new_chat():
     """Cria um novo chat com os campos necessários, incluindo a memória de curto prazo."""
     chat_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     st.session_state.chats[chat_id] = {
-        "title": "Nova Conversa",
+        "title": "Jarvis IA - Welcome!",
         "messages": [],
         "contexto_arquivo": "",
         "ultima_mensagem_falada": None,
@@ -829,6 +970,15 @@ with st.sidebar:
         "🔊 Ouvir respostas do Jarvis", value=False, key="voz_ativada")
     st.divider()
 
+    st.write("#### Configurações de Voz")
+    idioma_selecionado = st.selectbox(
+        "Idioma da Fala (Entrada)",
+        options=['pt-BR', 'en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'], # Sinta-se à vontade para adicionar mais
+        index=0, # Garante que 'pt-BR' seja o padrão
+        key="idioma_fala",
+        help="Escolha o idioma que você irá falar no microfone."
+    )
+
     # Seção do Histórico de Chats
     st.write("#### Histórico de Chats")
     # Garante que o st.session_state.chats existe antes de iterar
@@ -902,12 +1052,24 @@ with st.sidebar:
     # SÓ MOSTRA O BOTÃO DO MICROFONE AQUI DENTRO DO `with st.sidebar:`
     if not IS_CLOUD_ENV:
         if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
-            texto_audio = escutar_audio()
-            if texto_audio != "Não consegui entender o que você disse.":
-                processar_entrada_usuario(texto_audio)
+            texto_audio, tom_da_voz = escutar_audio()
+            
+            if texto_audio:
+                # Passo 1: Adiciona a pergunta do usuário ao histórico para exibição imediata
+                chat_id = st.session_state.current_chat_id
+                active_chat = st.session_state.chats[chat_id]
+                active_chat["messages"].append(
+                    {"role": "user", "type": "text", "content": texto_audio})
+
+                # Salva o chat imediatamente para garantir que a pergunta apareça
+                salvar_chats(st.session_state["username"])
+                
+                # Passo 2: Agora sim, processa a entrada para gerar a resposta do Jarvis
+                processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
     else:
         # Opcional: Mostra um aviso útil para o usuário na versão web
         st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
+
 
 # --- ÁREA PRINCIPAL DO CHAT ---
 st.write(f"### {active_chat['title']}")
@@ -991,6 +1153,18 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
             active_chat["ultima_mensagem_falada"] = resposta_ia
             salvar_chats(st.session_state["username"])
 
+# --- Bloco para Exibição Persistente do Botão de Download ---
+# Ele verifica em toda recarga se deve mostrar o botão.
+if 'pdf_para_download' in st.session_state:
+    with st.chat_message("assistant"):
+        st.download_button(
+            label="📥 Baixar PDF",
+            data=st.session_state['pdf_para_download'],
+            file_name=st.session_state['pdf_filename'],
+            mime="application/pdf",
+            on_click=limpar_pdf_da_memoria  # <-- A MÁGICA ACONTECE AQUI
+        )
+
 # --- ENTRADA DE TEXTO DO USUÁRIO ---
 if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf..."):
 
@@ -1002,14 +1176,13 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
     salvar_chats(st.session_state["username"])
 
     # --- PROCESSAMENTO DE COMANDOS ESPECIAIS ---
+    # A estrutura if/elif/else a seguir está CORRETAMENTE aninhada.
     if prompt_usuario.lower().startswith("/lembrese "):
         texto_para_lembrar = prompt_usuario[10:].strip()
         if texto_para_lembrar:
-            # Chama a função de memorização e dá um feedback visual
             with st.chat_message("assistant"):
                 st.info("Memorizando sua preferência...")
                 processar_comando_lembrese(texto_para_lembrar)
-        # Não precisa de rerun, o toast dentro da função já é o feedback
 
     elif prompt_usuario.lower().startswith("/imagine "):
         prompt_da_imagem = prompt_usuario[9:].strip()
@@ -1017,32 +1190,33 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
             with st.chat_message("assistant"):
                 url_da_imagem = gerar_imagem_com_dalle(prompt_da_imagem)
                 if url_da_imagem:
-                    # Adiciona a imagem gerada ao histórico
                     active_chat["messages"].append(
                         {"role": "assistant", "type": "image", "content": url_da_imagem, "prompt": prompt_da_imagem})
                     salvar_chats(st.session_state["username"])
-        st.rerun()
+            st.rerun()
 
     elif prompt_usuario.lower().startswith("/pdf "):
         topico_pdf = prompt_usuario[5:].strip()
         if topico_pdf:
             with st.chat_message("assistant"):
                 with st.spinner("Criando seu PDF..."):
-                    texto_do_pdf = gerar_conteudo_para_pdf(topico_pdf)
-                    pdf_bytes = criar_pdf(texto_do_pdf, topico_pdf)
-                    st.download_button(
-                        label="📥 Baixar PDF",
-                        data=pdf_bytes,
-                        file_name=f"{topico_pdf.replace(' ', '_')[:30]}.pdf",
-                        mime="application/pdf"
-                    )
-            # Adiciona a confirmação ao histórico
+                    texto_completo_ia = gerar_conteudo_para_pdf(topico_pdf)
+                    
+                    linhas_ia = texto_completo_ia.strip().split('\n')
+                    titulo_documento = linhas_ia[0].replace('**', '').replace('###', '').replace('##', '').replace('#', '').strip()
+                    texto_corpo = '\n'.join(linhas_ia[1:]).strip()
+                    
+                    pdf_bytes = criar_pdf(texto_corpo, titulo_documento)
+                    
+                    st.session_state['pdf_para_download'] = pdf_bytes
+                    st.session_state['pdf_filename'] = f"{titulo_documento.replace(' ', '_')[:30]}.pdf"
+
             active_chat["messages"].append(
-                {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{topico_pdf}'. O botão de download foi exibido acima."})
+                {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{titulo_documento}'. O botão de download foi exibido."})
             salvar_chats(st.session_state["username"])
+        
         st.rerun()
 
     else:
-        # --- PROCESSAMENTO DE CHAT NORMAL ---
-        # Se não for nenhum comando, chama a função de processamento principal
+        # Se não for nenhum comando, chama a função de processamento de chat normal
         processar_entrada_usuario(prompt_usuario)

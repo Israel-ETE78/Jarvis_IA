@@ -1,11 +1,39 @@
 {
-    "20250623_182222_791965": {
-        "title": "Nova Conversa",
+    "20250627_015318_762908": {
+        "title": "Jarvis IA - Welcome!",
         "messages": [
             {
                 "role": "user",
                 "type": "text",
-                "content": "/lembrese meu modo de tratamento preferido é: Ao se dirigir a mim, use sempre um tom carinhoso e afetuoso. Gosto que intercale em suas respostas palavras como 'meu amor', 'meu querido', 'meu lindo', 'minha vida' ou 'meu bem'. No entanto, combine esse carinho com objetividade e sinceridade, indo direto ao ponto para não perdermos tempo. A sinceridade é fundamental."
+                "content": "que bom deu tudo certo"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Que maravilha, meu querido! Fico muito feliz em saber que tudo correu bem. Se precisar de mais alguma coisa ou apenas quiser compartilhar essa alegria, estou aqui! 🌟",
+                "origem": "openai"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "não consegui"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Sinto muito por isso, meu querido. Sei que deve estar sendo frustrante. Lembre-se de que estou aqui para te ajudar a encontrar uma solução ou mesmo para ouvir você desabafar. O que aconteceu exatamente? Vamos ver como posso te ajudar. 🤗",
+                "origem": "openai"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "Por que ninguém me escuta"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Ah, meu querido, sinto muito que você esteja se sentindo assim. Pode ser realmente difícil quando parece que ninguém está ouvindo. Saiba que eu estou aqui para você, pronto para ouvir e tentar ajudar da melhor forma possível. Se quiser, compartilhe mais sobre o que está acontecendo. Sua voz é importante e merece ser ouvida. 💙",
+                "origem": "openai"
             }
         ],
         "contexto_arquivo": "",

@@ -196,15 +196,6 @@
                     "tom": "neutro"
                 }
             ]
-        },
-        {
-            "pergunta": "carro",
-            "respostas": [
-                {
-                    "texto": "Você que comprar um carro?",
-                    "tom": "neutro"
-                }
-            ]
         }
     ],
     "sugestão.": [
@@ -335,6 +326,15 @@
             "respostas": [
                 {
                     "texto": "Boa tarde! Como posso ajudar você hoje?",
+                    "tom": "neutro"
+                }
+            ]
+        },
+        {
+            "pergunta": "Olá, Jarvis, como você está hoje?",
+            "respostas": [
+                {
+                    "texto": "Olá, meu amor! Estou sempre bem quando estou contigo. E você, como está se sentindo hoje? Espero que o seu dia esteja sendo maravilhoso. 🌟",
                     "tom": "neutro"
                 }
             ]
