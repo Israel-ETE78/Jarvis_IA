@@ -3,6 +3,7 @@
 # ==============================================================================
 import logging
 import streamlit as st
+import copy
 from openai import OpenAI
 import json
 from difflib import SequenceMatcher
@@ -12,11 +13,11 @@ import speech_recognition as sr
 from dotenv import load_dotenv
 import os
 import datetime
-from langdetect import detect, LangDetectException
 import random
 import re
 import base64
 import pandas as pd
+import plotly.express as px
 from fpdf import FPDF
 from auth import check_password # Sua autenticação local
 from utils import carregar_preferencias, salvar_preferencias
@@ -334,11 +335,33 @@ def detectar_tom_usuario(pergunta_usuario):
         return "" # Retorna vazio em caso de erro
 
 
-def detectar_idioma(texto):
+# [SUBSTITUA a antiga função detectar_idioma POR ESTA]
+
+def detectar_idioma_com_ia(texto_usuario):
+    """Usa a própria OpenAI para detectar o idioma, um método mais preciso."""
+    if not texto_usuario.strip():
+        return 'pt' # Retorna português como padrão se o texto for vazio
+
     try:
-        return detect(texto)
-    except LangDetectException:
-        return 'pt'
+        prompt = f"Qual o código de idioma ISO 639-1 (ex: 'en', 'pt', 'es') do seguinte texto? Responda APENAS com o código de duas letras.\n\nTexto: \"{texto_usuario}\""
+        
+        resposta_modelo = modelo.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=5, # Super curto e rápido
+            temperature=0
+        )
+        idioma = resposta_modelo.choices[0].message.content.strip().lower()
+        
+        # Garante que a resposta tenha apenas 2 caracteres
+        if len(idioma) == 2:
+            return idioma
+        else:
+            return 'pt' # Retorna um padrão seguro em caso de resposta inesperada
+            
+    except Exception as e:
+        print(f"Erro ao detectar idioma com IA: {e}")
+        return 'pt' # Retorna um padrão seguro em caso de erro
 
 
 def preparar_texto_para_fala(texto):
@@ -509,13 +532,22 @@ def carregar_chats(username):
 
 # NOVO salvar_chats
 def salvar_chats(username):
-    """Salva os chats do usuário em um arquivo JSON específico para ele."""
-    if not username:
-        return # Não faz nada se não houver um nome de usuário
+    """Salva os chats do usuário, ignorando objetos não-serializáveis como DataFrames."""
+    if not username or "chats" not in st.session_state:
+        return
 
+    # 1. Cria uma cópia exata e segura do histórico de chats
+    chats_para_salvar = copy.deepcopy(st.session_state.chats)
+
+    # 2. Itera sobre a CÓPIA e remove a chave 'dataframe' se ela existir
+    for chat_id in chats_para_salvar:
+        if "dataframe" in chats_para_salvar[chat_id]:
+            del chats_para_salvar[chat_id]["dataframe"]
+
+    # 3. Salva a cópia limpa (sem DataFrames) no arquivo JSON
     filename = f"chats_historico_{username}.json"
     with open(filename, "w", encoding="utf-8") as f:
-        json.dump(st.session_state.chats, f, ensure_ascii=False, indent=4)
+        json.dump(chats_para_salvar, f, ensure_ascii=False, indent=4)
 
 
 def escolher_resposta_por_contexto(entry):
@@ -538,18 +570,21 @@ def buscar_resposta_local(pergunta_usuario, memoria, limiar=0.9):
     return None
 
 
+# [SUBSTITUA SUA FUNÇÃO responder_com_inteligencia POR ESTA VERSÃO APRIMORADA]
+
+# [VERSÃO DE DEBUG da função responder_com_inteligencia]
+
+# [VERSÃO FINAL da função responder_com_inteligencia]
+
 def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_contexto="", tom_de_voz_detectado=None):
     """
-    Decide como responder, considerando memória local, busca na web, preferências e o tom do usuário.
+    Decide como responder, com uma instrução de idioma reforçada e precisa.
     """
-    # =======================================================
-    # === CORREÇÃO: Definindo a variável no início ===
-    # =======================================================
-    # Detecta o idioma da pergunta do usuário para usar em toda a função
-    idioma_da_pergunta = detectar_idioma(pergunta_usuario)
-    # =======================================================
+    # --- ETAPA 0: DETECÇÃO DE IDIOMA PRECISA COM IA ---
+    idioma_da_pergunta = detectar_idioma_com_ia(pergunta_usuario)
+    instrucao_idioma_reforcada = f"Sua regra mais importante e inegociável é responder estritamente no seguinte idioma: '{idioma_da_pergunta}'. Não use nenhum outro idioma sob nenhuma circunstância."
 
-    # ETAPA 1: Tenta responder com a memória local primeiro
+    # --- ETAPA 1: Tenta responder com a memória local primeiro ---
     if modelo_embedding:
         try:
             vetor_pergunta_usuario = modelo_embedding.encode([pergunta_usuario])
@@ -569,56 +604,36 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
             logging.error(f"Erro ao processar com modelo local: {e}")
             st.warning(f"Erro ao processar com modelo local: {e}. Usando OpenAI.")
     
-    # Carrega as preferências do usuário
+    # Carrega as preferências do usuário e detecta o tom
     username = st.session_state.get("username", "default")
     preferencias = carregar_preferencias(username)
-    
-    # Detecta o tom do usuário
     tom_do_usuario = detectar_tom_usuario(pergunta_usuario)
     if tom_do_usuario:
         st.sidebar.info(f"Tom detectado: {tom_do_usuario}")
 
-    # ETAPA 2: Decide se precisa de informações da internet
+    # --- ETAPA 2: Decide se precisa de informações da internet ---
     if precisa_buscar_na_web(pergunta_usuario):
-        
         logging.info(f"Iniciando busca na web para a pergunta: '{pergunta_usuario}'")
-        
         st.info("Buscando informações em tempo real na web... 🌐")
         contexto_da_web = buscar_na_internet(pergunta_usuario)
         
-        prompt_sistema = f"""
-        Você é Jarvis, um assistente prestativo.
-        INFORMAÇÕES SOBRE SEU USUÁRIO, ISRAEL: {json.dumps(preferencias, ensure_ascii=False)}
-        O tom atual do usuário parece ser: {tom_do_usuario}. Adapte o estilo da sua resposta a este tom.
-
-        Sua tarefa é responder à pergunta do usuário de forma clara e direta, baseando-se ESTRITAMENTE nas informações de contexto que foram coletadas da internet.
-        
-        Contexto da Web:
-        {contexto_da_web}
-        """
-
+        prompt_sistema = f"""{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente prestativo. Sua tarefa é responder à pergunta do usuário de forma clara e direta, baseando-se ESTRITAMENTE nas informações de contexto da web.\n\nINFORMAÇÕES SOBRE SEU USUÁRIO, ISRAEL: {json.dumps(preferencias, ensure_ascii=False)}\nO tom atual do usuário parece ser: {tom_do_usuario}.\n\nContexto da Web:\n{contexto_da_web}"""
     else:
-        # ETAPA 3: Se não precisa de busca, usa o fluxo de chat padrão
+        # --- ETAPA 3: Se não precisa de busca, usa o fluxo de chat padrão ---
         logging.info("Pergunta não requer busca na web, consultando a OpenAI.")
         st.info("Consultando a OpenAI...")
         
-        prompt_sistema = "Você é Jarvis, um assistente prestativo."
+        prompt_sistema = f"{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente prestativo."
         
         if tom_de_voz_detectado and tom_de_voz_detectado != "neutro":
-            prompt_sistema += f"\nO tom de voz do usuário parece ser '{tom_de_voz_detectado}'. Adapte sua resposta a isso, sendo mais empático ou cuidadoso se necessário."
+            prompt_sistema += f"\nO tom de voz do usuário parece ser '{tom_de_voz_detectado}'. Adapte sua resposta a isso."
         if tom_do_usuario:
-            prompt_sistema += f"\nO tom do texto dele parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso (ex: se ele estiver apressado, seja breve; se estiver descontraído, seja mais amigável)."
+            prompt_sistema += f"\nO tom do texto dele parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso."
         if preferencias:
             prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, Israel: {json.dumps(preferencias, ensure_ascii=False)}"
         if resumo_contexto:
             prompt_sistema += f"\nLembre-se também do contexto da conversa atual: {resumo_contexto}"
-        
-    # =======================================================
-    # === CORREÇÃO: Adicionando a instrução de idioma ao final do prompt ===
-    # =======================================================
-    prompt_sistema += f"\n\nIMPORTANTE: Responda ao usuário final estritamente no seguinte idioma, sem exceções: '{idioma_da_pergunta}'"
-    # =======================================================
-
+    
     mensagens_para_api = [{"role": "system", "content": prompt_sistema}]
     mensagens_para_api.extend(historico_chat)
 
@@ -686,18 +701,44 @@ def escutar_audio():
         return None, None
 
 
+# [SUBSTITUA SUA FUNÇÃO processar_entrada_usuario POR ESTA]
+
 def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     chat_id = st.session_state.current_chat_id
     active_chat = st.session_state.chats[chat_id]
 
-    # Prepara o histórico da conversa
+    # --- MODO DE ANÁLISE DE DADOS ---
+    if active_chat.get("dataframe") is not None:
+        df = active_chat.get("dataframe")
+        
+        if prompt_usuario.lower() in ["/sair", "/exit", "/sair_analise"]:
+            active_chat["dataframe"] = None
+            active_chat["processed_file_name"] = None
+            active_chat["messages"].append({
+                "role": "assistant", "type": "text", 
+                "content": "Modo de análise desativado. Como posso ajudar?"
+            })
+            salvar_chats(st.session_state["username"])
+            st.rerun()
+            return
+
+        resultado_analise = analisar_dados_com_ia(prompt_usuario, df)
+        active_chat["messages"].append({
+            "role": "assistant",
+            "type": resultado_analise["type"],
+            "content": resultado_analise["content"]
+        })
+        salvar_chats(st.session_state["username"])
+        st.rerun()
+        return
+
+    # --- MODO DE CHAT NORMAL (LÓGICA COMPLETA) ---
     historico_chat = [
         {"role": msg["role"], "content": msg["content"]}
         for msg in active_chat["messages"]
         if msg.get("type") == "text"
     ]
 
-    # --- LÓGICA DA MEMÓRIA DE CURTO PRAZO ---
     numero_de_mensagens = len(historico_chat)
     if numero_de_mensagens > 0 and numero_de_mensagens % 6 == 0:
         resumo_atualizado = gerar_resumo_curto_prazo(historico_chat)
@@ -705,8 +746,6 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
         st.toast("🧠 Memória de curto prazo atualizada.", icon="🔄")
 
     resumo_contexto = active_chat.get("resumo_curto_prazo", "")
-
-    # --- LÓGICA DE ANÁLISE DE DOCUMENTOS (REINTEGRADA) ---
     contexto_do_arquivo = active_chat.get("contexto_arquivo")
 
     if contexto_do_arquivo:
@@ -720,11 +759,9 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     else:
         historico_final = historico_chat
 
-    # Chama a função de resposta com o histórico final e o tom da voz
     dict_resposta = responder_com_inteligencia(
         prompt_usuario, modelo, historico_final, resumo_contexto, tom_de_voz_detectado=tom_voz)
 
-    # Adiciona a resposta da IA ao histórico
     active_chat["messages"].append({
         "role": "assistant",
         "type": "text",
@@ -734,6 +771,7 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     salvar_chats(st.session_state["username"])
     st.rerun()
 
+   
 
 def adicionar_a_memoria(pergunta, resposta):
     """Adiciona um novo par de pergunta/resposta à memória local."""
@@ -873,6 +911,100 @@ def buscar_na_internet(pergunta_usuario):
         return f"ERRO ao pesquisar na web: {e}"
 
 
+# [SUBSTITUA SUA FUNÇÃO analisar_dados_com_ia POR ESTA VERSÃO APRIMORADA]
+
+def analisar_dados_com_ia(prompt_usuario, df):
+    """
+    Usa a IA em um processo de duas etapas:
+    1. Gera e executa código Python para obter resultados brutos.
+    2. Envia os resultados brutos para a IA novamente para gerar uma interpretação amigável.
+    """
+    st.info("Gerando e executando análise...")
+
+    # --- ETAPA 1: Gerar o código Python de análise ---
+    schema = df.head().to_string()
+    prompt_gerador_codigo = f"""
+    Você é um gerador de código Python para análise de dados com Pandas.
+    O usuário tem um dataframe `df` com o seguinte schema:
+    {schema}
+
+    A pergunta do usuário é: "{prompt_usuario}"
+
+    Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados necessários para responder à pergunta.
+    - Use a função `print()` para exibir todos os resultados brutos necessários (tabelas, contagens, médias, etc.).
+    - Se a pergunta pedir explicitamente um gráfico, use `plotly.express` e atribua a figura a uma variável chamada `fig`.
+    - Responda apenas com o bloco de código Python.
+    """
+
+    try:
+        resposta_modelo_codigo = modelo.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt_gerador_codigo}],
+            temperature=0,
+        )
+        codigo_gerado = resposta_modelo_codigo.choices[0].message.content.strip()
+
+        if codigo_gerado.startswith("```python"):
+            codigo_gerado = codigo_gerado[9:].strip()
+        elif codigo_gerado.startswith("```"):
+            codigo_gerado = codigo_gerado[3:].strip()
+        if codigo_gerado.endswith("```"):
+            codigo_gerado = codigo_gerado[:-3].strip()
+
+        # --- ETAPA 2: Executar o código e capturar a saída bruta ---
+        local_vars = {"df": df, "pd": pd, "px": px}
+        output_buffer = io.StringIO()
+        
+        from contextlib import redirect_stdout
+        with redirect_stdout(output_buffer):
+            exec(codigo_gerado, local_vars)
+
+        # Se um gráfico foi gerado, retorne-o imediatamente.
+        if "fig" in local_vars:
+            st.success("Gráfico gerado com sucesso!")
+            return {"type": "plot", "content": local_vars["fig"]}
+
+        resultados_brutos = output_buffer.getvalue().strip()
+        
+        if not resultados_brutos:
+            return {"type": "text", "content": "A análise foi executada, mas não produziu resultados visíveis."}
+        
+        st.info("Análise executada. Interpretando resultados para o usuário...")
+
+        # --- ETAPA 3 (NOVA): Enviar a saída bruta para a IA para interpretação ---
+        prompt_interpretador = f"""
+        Você é Jarvis, um assistente de IA especialista em análise de dados. Sua tarefa é atuar como um analista de negócios e explicar os resultados de uma análise de forma clara, visual e com insights para um usuário final.
+
+        A pergunta original do usuário foi: "{prompt_usuario}"
+
+        Abaixo estão os resultados brutos obtidos de um script Python:
+        --- DADOS BRUTOS ---
+        {resultados_brutos}
+        --- FIM DOS DADOS BRUTOS ---
+
+        Por favor, transforme esses dados brutos em um relatório amigável.
+        - **NUNCA** mostre as tabelas de dados brutos ou o texto técnico.
+        - Use Markdown, emojis (como 📊, 👤, 🚨) e negrito para criar um "Dashboard de Insights Rápidos".
+        - Apresente os números de forma clara (ex: "56,8%" em vez de "0.56788").
+        - Identifique o principal "Insight Estratégico" ou "Alerta" que os dados revelam.
+        - No final, sugira 2 ou 3 perguntas inteligentes que o usuário poderia fazer para aprofundar a análise.
+        """
+        
+        resposta_modelo_interpretacao = modelo.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt_interpretador}],
+            temperature=0.4,
+        )
+        
+        resumo_claro = resposta_modelo_interpretacao.choices[0].message.content
+
+        st.success("Relatório gerado!")
+        return {"type": "text", "content": resumo_claro}
+
+    except Exception as e:
+        error_message = f"Desculpe, ocorreu um erro ao tentar analisar sua pergunta:\n\n**Erro:**\n`{e}`\n\n**Código que falhou:**\n```python\n{codigo_gerado}\n```"
+        return {"type": "text", "content": error_message}
+
 # --- INTERFACE GRÁFICA (STREAMLIT) ---
 st.set_page_config(page_title="Jarvis IA", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0d1117; color: #c9d1d9; } .stTextInput, .stChatInput textarea { background-color: #161b22; color: #c9d1d9; border-radius: 8px; } .stButton button { background-color: #151b22; color: white; border-radius: 10px; border: none; }</style>""", unsafe_allow_html=True)
@@ -883,18 +1015,18 @@ memoria = carregar_memoria()
 
 
 def create_new_chat():
-    """Cria um novo chat com os campos necessários, incluindo a memória de curto prazo."""
+    """Cria um novo chat com todos os campos necessários."""
     chat_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     st.session_state.chats[chat_id] = {
         "title": "Jarvis IA - Welcome!",
         "messages": [],
-        "contexto_arquivo": "",
-        "ultima_mensagem_falada": None,
+        "contexto_arquivo": None,
         "processed_file_name": None,
-        "resumo_curto_prazo": ""  # NOVO: Campo para a memória de curto prazo
+        "dataframe": None,  # Importante para consistência
+        "resumo_curto_prazo": "",
+        "ultima_mensagem_falada": None
     }
     st.session_state.current_chat_id = chat_id
-    
     return chat_id
 
 
@@ -934,34 +1066,22 @@ active_chat = st.session_state.chats[chat_id]
 with st.sidebar:
     st.write("### 🤖 Jarvis IA")
 
-    # --- NAVEGAÇÃO CUSTOMIZADA DA SIDEBAR ---
     st.sidebar.title("Navegação")
 
-    # Link para a página principal, visível para todos
     st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
     
-        # --- NOVA SEÇÃO PARA O USUÁRIO LOGADO ---
     st.sidebar.divider()
     st.sidebar.header("Painel do Usuário")
-    # Este link aparecerá para QUALQUER usuário logado
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
-    # --- FIM DA NOVA SEÇÃO ---
 
-    # Verifica se o usuário logado é o admin para mostrar as páginas restritas
     #if st.session_state.get("username") == ADMIN_USERNAME:
-      #  st.sidebar.divider()
-       # st.sidebar.header("Painel do Admin")
-        
-        # Links para as páginas de admin, usando os nomes exatos dos seus arquivos
-       # st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
-       # st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
+        #st.sidebar.divider()
+        #st.sidebar.header("Painel do Admin")
+        #st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
+        #st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
     
     st.sidebar.divider()
     
-    
-    # --- AÇÕES E HISTÓRICO ---
-    
-    # Seção de Ações Principais
     if st.button("➕ Novo Chat", use_container_width=True, type="primary"):
         create_new_chat()
         st.rerun()
@@ -973,15 +1093,13 @@ with st.sidebar:
     st.write("#### Configurações de Voz")
     idioma_selecionado = st.selectbox(
         "Idioma da Fala (Entrada)",
-        options=['pt-BR', 'en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'], # Sinta-se à vontade para adicionar mais
-        index=0, # Garante que 'pt-BR' seja o padrão
+        options=['pt-BR', 'en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'],
+        index=0,
         key="idioma_fala",
         help="Escolha o idioma que você irá falar no microfone."
     )
 
-    # Seção do Histórico de Chats
     st.write("#### Histórico de Chats")
-    # Garante que o st.session_state.chats existe antes de iterar
     if "chats" in st.session_state:
         for id, chat_data in reversed(list(st.session_state.chats.items())):
             col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
@@ -1005,70 +1123,94 @@ with st.sidebar:
                         delete_chat(id)
     st.divider()
 
-    # Seção para Anexar Arquivos
     with st.expander("📂 Anexar Arquivos"):
-        # ATUALIZE ESTA LISTA COM AS NOVAS EXTENSÕES PARA O FILE_UPLOADER
-        tipos_aceitos = [
-            "pdf", "docx", "txt", "xlsx", "xls",
-            "py", "js", "ts", "html", "htm", "css", "php", "java", "kt",
-            "c", "cpp", "h", "cs", "rb", "go", "swift", "sql", "json",
-            "xml", "yaml", "yml", "md", "sh", "bat", "ps1", "R", "pl", "lua"
+        tipos_dados = ["csv", "xlsx", "xls", "json"]
+        tipos_documentos = [
+            "pdf", "docx", "txt", "py", "js", "ts", "html", "htm", "css", 
+            "php", "java", "kt", "c", "cpp", "h", "cs", "rb", "go", 
+            "swift", "sql", "xml", "yaml", "yml", "md", "sh", "bat", "ps1", "R", "pl", "lua"
         ]
-        # Usa um chat_id como parte da chave para garantir que o uploader reinicie com o chat
+        
         chat_id_for_key = st.session_state.current_chat_id
         
         arquivo = st.file_uploader(
-            "📄 Documento, Planilha ou Arquivo de Código", # Rótulo do uploader
-            type=tipos_aceitos, # <-- AGORA USARÁ A LISTA COMPLETA
+            "📄 Documento, Código ou Dados (.csv, .xlsx, .json)",
+            type=tipos_dados + tipos_documentos,
             key=f"uploader_doc_{chat_id_for_key}"
         )
-        if arquivo and arquivo.name != st.session_state.chats[chat_id_for_key].get("processed_file_name"):
-            st.session_state.chats[chat_id_for_key]["contexto_arquivo"] = extrair_texto_documento(arquivo)
-            st.session_state.chats[chat_id_for_key]["processed_file_name"] = arquivo.name
+
+        if arquivo and arquivo.name != active_chat.get("processed_file_name"):
+            active_chat["contexto_arquivo"] = None
+            active_chat["dataframe"] = None
+            file_extension = arquivo.name.split('.')[-1].lower()
+
+            if file_extension in tipos_dados:
+                with st.spinner(f"Analisando '{arquivo.name}'..."):
+                    try:
+                        df = None
+                        if file_extension == 'csv': df = pd.read_csv(arquivo)
+                        elif file_extension in ['xlsx', 'xls']: df = pd.read_excel(arquivo, engine='openpyxl')
+                        elif file_extension == 'json': df = pd.read_json(arquivo)
+                        
+                        if df is not None:
+                            active_chat["dataframe"] = df
+                            active_chat["processed_file_name"] = arquivo.name
+                            st.success(f"Arquivo '{arquivo.name}' carregado! Jarvis está em modo de análise.")
+                            active_chat["messages"].append({
+                                "role": "assistant", "type": "text", 
+                                "content": f"Arquivo `{arquivo.name}` carregado. Agora sou seu assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
+                            })
+                    except Exception as e:
+                        st.error(f"Erro ao carregar o arquivo de dados: {e}")
+            else:
+                active_chat["contexto_arquivo"] = extrair_texto_documento(arquivo)
+                active_chat["processed_file_name"] = arquivo.name
+            
             salvar_chats(st.session_state["username"])
             st.rerun()
 
         imagem = st.file_uploader(
             "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id_for_key}")
-        if imagem and imagem.name != st.session_state.chats[chat_id_for_key].get("processed_file_name"):
+        if imagem and imagem.name != active_chat.get("processed_file_name"):
             st.image(imagem, width=200)
-            st.session_state.chats[chat_id_for_key]["contexto_arquivo"] = analisar_imagem(imagem)
-            st.session_state.chats[chat_id_for_key]["processed_file_name"] = imagem.name
+            active_chat["contexto_arquivo"] = analisar_imagem(imagem)
+            active_chat["processed_file_name"] = imagem.name
             salvar_chats(st.session_state["username"])
             st.rerun()
-            
-        if active_chat.get("contexto_arquivo"):
-            st.info("Jarvis está em 'Modo de Análise de Dados'.")
-            st.text_area("Conteúdo extraído:",
-                         value=active_chat["contexto_arquivo"], height=150, key=f"context_area_{chat_id}")
-            if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_{chat_id}"):
+        
+        if active_chat.get("dataframe") is not None:
+            st.info("Jarvis em 'Modo de Análise de Dados'.")
+            with st.expander("Ver resumo dos dados"):
+                st.dataframe(active_chat["dataframe"].head())
+                buffer = io.StringIO()
+                active_chat["dataframe"].info(buf=buffer)
+                st.text(buffer.getvalue())
+            if st.button("🗑️ Sair do Modo de Análise", type="primary", key=f"forget_btn_data_{chat_id}"):
+                  create_new_chat()
+                  st.rerun()
+
+        elif active_chat.get("contexto_arquivo"):
+            st.info("Jarvis está em 'Modo de Análise de Documento'.")
+            st.text_area("Conteúdo extraído:", value=active_chat["contexto_arquivo"], height=200, key=f"contexto_arquivo_{chat_id}")
+            if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_doc_{chat_id}"):
                 create_new_chat()
                 st.rerun()
-    
-    # Detecta se estamos na nuvem verificando a existência de um "Secret"
-    # Se o secret existir, estamos na nuvem.
-    IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets # This line is correct
 
-    # SÓ MOSTRA O BOTÃO DO MICROFONE AQUI DENTRO DO `with st.sidebar:`
+    IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
+
     if not IS_CLOUD_ENV:
-        if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
+        if st.button("🎙️Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
             texto_audio, tom_da_voz = escutar_audio()
             
             if texto_audio:
-                # Passo 1: Adiciona a pergunta do usuário ao histórico para exibição imediata
-                chat_id = st.session_state.current_chat_id
-                active_chat = st.session_state.chats[chat_id]
+                active_chat = st.session_state.chats[st.session_state.current_chat_id]
                 active_chat["messages"].append(
                     {"role": "user", "type": "text", "content": texto_audio})
-
-                # Salva o chat imediatamente para garantir que a pergunta apareça
                 salvar_chats(st.session_state["username"])
                 
-                # Passo 2: Agora sim, processa a entrada para gerar a resposta do Jarvis
                 processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
     else:
-        # Opcional: Mostra um aviso útil para o usuário na versão web
-        st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
+        st.sidebar.warning("A função de microfone está desativada na versão web.", icon="🎙️")
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---
@@ -1076,12 +1218,14 @@ st.write(f"### {active_chat['title']}")
 
 for i, mensagem in enumerate(active_chat["messages"]):
     with st.chat_message(mensagem["role"]):
-        # Lógica para exibir imagens ou texto
-        if mensagem.get("type") == "image":
-            st.image(mensagem["content"], caption=mensagem.get(
-                "prompt", "Imagem gerada"))
+        # --- NOVA LÓGICA PARA EXIBIR GRÁFICOS ---
+        if mensagem.get("type") == "plot":
+            st.plotly_chart(mensagem["content"], use_container_width=True)
+        # --- FIM DA NOVA LÓGICA ---
+        elif mensagem.get("type") == "image":
+            st.image(mensagem["content"], caption=mensagem.get("prompt", "Imagem gerada"))
         else:
-            st.write(mensagem["content"])
+            st.write(mensagem["content"]) # Lógica existente para texto
 
 # ... no loop principal de chat
 # Verifica se a mensagem veio da OpenAI E SE o usuário logado é o admin
@@ -1123,7 +1267,7 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
     if active_chat["messages"][-1].get("type") == "text":
         resposta_ia = active_chat["messages"][-1]["content"]
         if resposta_ia != active_chat.get("ultima_mensagem_falada"):
-            idioma_detectado = detectar_idioma(resposta_ia)
+            idioma_detectado = detectar_idioma_com_ia(resposta_ia)
             texto_limpo_para_fala = preparar_texto_para_fala(resposta_ia)
             resposta_formatada_para_voz = json.dumps(texto_limpo_para_fala)
             st.components.v1.html(f"""
@@ -1140,7 +1284,7 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
     if active_chat["messages"][-1].get("type") == "text":
         resposta_ia = active_chat["messages"][-1]["content"]
         if resposta_ia != active_chat.get("ultima_mensagem_falada"):
-            idioma_detectado = detectar_idioma(resposta_ia)
+            idioma_detectado = detectar_idioma_com_ia(resposta_ia)
             texto_limpo_para_fala = preparar_texto_para_fala(resposta_ia)
             resposta_formatada_para_voz = json.dumps(texto_limpo_para_fala)
             st.components.v1.html(f"""
