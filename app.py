@@ -892,14 +892,13 @@ def precisa_buscar_na_web(pergunta_usuario):
         print(f"Erro ao verificar necessidade de busca: {e}")
         return False
 
-
-# NOVA FUNÇÃO 2: A FERRAMENTA DE BUSCA
+# FERRAMENTA DE BUSCA
 def buscar_na_internet(pergunta_usuario):
     """
     Pesquisa a pergunta na web usando a API Serper e retorna um resumo dos resultados.
     """
     print(f"Pesquisando na web por: {pergunta_usuario}")
-    #api_key_serper = os.getenv("SERPER_API_KEY")
+    
     #api_key_serper = st.secrets["SERPER_API_KEY"]
     if not api_key_serper:
         return "ERRO: A chave da API Serper não foi configurada."
@@ -928,7 +927,6 @@ def buscar_na_internet(pergunta_usuario):
 
 
 # [SUBSTITUA SUA FUNÇÃO analisar_dados_com_ia POR ESTA VERSÃO APRIMORADA]
-
 def analisar_dados_com_ia(prompt_usuario, df):
     """
     Usa a IA em um processo de duas etapas:
@@ -939,18 +937,21 @@ def analisar_dados_com_ia(prompt_usuario, df):
 
     # --- ETAPA 1: Gerar o código Python de análise ---
     schema = df.head().to_string()
+    
+    # A linha abaixo e todo o bloco de texto foram indentados corretamente
     prompt_gerador_codigo = f"""
-    Você é um gerador de código Python para análise de dados com Pandas.
-    O usuário tem um dataframe `df` com o seguinte schema:
-    {schema}
+Você é um gerador de código Python para análise de dados com Pandas.
+O usuário tem um dataframe `df` com o seguinte schema:
+{schema}
 
-    A pergunta do usuário é: "{prompt_usuario}"
+A pergunta do usuário é: "{prompt_usuario}"
 
-    Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados necessários para responder à pergunta.
-    - Use a função `print()` para exibir todos os resultados brutos necessários (tabelas, contagens, médias, etc.).
-    - Se a pergunta pedir explicitamente um gráfico, use `plotly.express` e atribua a figura a uma variável chamada `fig`.
-    - Responda apenas com o bloco de código Python.
-    """
+Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados necessários para responder à pergunta.
+- Use a função `print()` para exibir todos os resultados brutos necessários (tabelas, contagens, médias, etc.).
+- Se a pergunta pedir explicitamente um gráfico, use `plotly.express` e atribua a figura a uma variável chamada `fig`.
+- **IMPORTANTE: Ao usar funções de agregação como `.mean()`, `.sum()`, ou `.corr()`, sempre inclua o argumento `numeric_only=True` para evitar erros com colunas de texto. Exemplo: `df.mean(numeric_only=True)`.**
+- Responda apenas com o bloco de código Python.
+"""
 
     try:
         resposta_modelo_codigo = modelo.chat.completions.create(
@@ -1020,7 +1021,6 @@ def analisar_dados_com_ia(prompt_usuario, df):
     except Exception as e:
         error_message = f"Desculpe, ocorreu um erro ao tentar analisar sua pergunta:\n\n**Erro:**\n`{e}`\n\n**Código que falhou:**\n```python\n{codigo_gerado}\n```"
         return {"type": "text", "content": error_message}
-
 # --- INTERFACE GRÁFICA (STREAMLIT) ---
 st.set_page_config(page_title="Jarvis IA", layout="wide")
 st.markdown("""<style>.stApp { background-color: #0d1117; color: #c9d1d9; } .stTextInput, .stChatInput textarea { background-color: #161b22; color: #c9d1d9; border-radius: 8px; } .stButton button { background-color: #151b22; color: white; border-radius: 10px; border: none; }</style>""", unsafe_allow_html=True)
