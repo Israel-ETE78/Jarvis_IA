@@ -1216,7 +1216,8 @@ with st.sidebar:
                 st.rerun()
 
     # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
-    IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
+    IS_CLOUD_ENV = not os.getenv("HOME") or "streamlit" in os.getenv("HOME", "").lower()
+
 
     if not IS_CLOUD_ENV:
         if st.button("🎙️ Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
