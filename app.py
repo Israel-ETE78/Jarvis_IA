@@ -1219,18 +1219,19 @@ with st.sidebar:
     IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
 
     if not IS_CLOUD_ENV:
-        if st.button("🎙️Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
+        if st.button("🎙️ Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
             texto_audio, tom_da_voz = escutar_audio()
-            
+
             if texto_audio:
                 active_chat = st.session_state.chats[st.session_state.current_chat_id]
                 active_chat["messages"].append(
-                    {"role": "user", "type": "text", "content": texto_audio})
+                    {"role": "user", "type": "text", "content": texto_audio}
+                )
                 salvar_chats(st.session_state["username"])
-                
+
                 processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
     else:
-        st.sidebar.warning("A função de microfone está desativada na versão web.", icon="🎙️")
+        st.sidebar.warning("🎙️ A função de microfone está desativada na versão web.")
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---
