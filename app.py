@@ -1079,11 +1079,12 @@ if "chats" not in st.session_state:
 chat_id = st.session_state.current_chat_id
 active_chat = st.session_state.chats[chat_id]
 
+
+
 with st.sidebar:
     st.write("### 🤖 Jarvis IA")
 
     st.sidebar.title("Navegação")
-
     st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
     
     st.sidebar.divider()
@@ -1091,10 +1092,10 @@ with st.sidebar:
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
 
     #if st.session_state.get("username") == ADMIN_USERNAME:
-        #st.sidebar.divider()
-        #st.sidebar.header("Painel do Admin")
-        #st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
-        #st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
+    #    st.sidebar.divider()
+    #    st.sidebar.header("Painel do Admin")
+    #    st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
+    #    st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
     
     st.sidebar.divider()
     
@@ -1174,7 +1175,7 @@ with st.sidebar:
                             st.success(f"Arquivo '{arquivo.name}' carregado! Jarvis está em modo de análise.")
                             active_chat["messages"].append({
                                 "role": "assistant", "type": "text", 
-                                "content": f"Arquivo `{arquivo.name}` carregado. Agora sou seu assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
+                                "content": f"Arquivo `{arquivo.name}` carregado. Agora sou sua assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
                             })
                     except Exception as e:
                         st.error(f"Erro ao carregar o arquivo de dados: {e}")
@@ -1202,8 +1203,8 @@ with st.sidebar:
                 active_chat["dataframe"].info(buf=buffer)
                 st.text(buffer.getvalue())
             if st.button("🗑️ Sair do Modo de Análise", type="primary", key=f"forget_btn_data_{chat_id}"):
-                  create_new_chat()
-                  st.rerun()
+                create_new_chat()
+                st.rerun()
 
         elif active_chat.get("contexto_arquivo"):
             st.info("Jarvis está em 'Modo de Análise de Documento'.")
@@ -1212,6 +1213,7 @@ with st.sidebar:
                 create_new_chat()
                 st.rerun()
 
+    # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
     IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
 
     if not IS_CLOUD_ENV:
