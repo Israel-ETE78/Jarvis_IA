@@ -532,19 +532,35 @@ def carregar_chats(username):
 
 # NOVO salvar_chats
 def salvar_chats(username):
-    """Salva os chats do usuário, ignorando objetos não-serializáveis como DataFrames."""
+    """
+    Salva os chats do usuário, ignorando objetos não-serializáveis como 
+    DataFrames (no nível do chat) e Figuras Plotly (no nível das mensagens).
+    """
     if not username or "chats" not in st.session_state:
         return
 
     # 1. Cria uma cópia exata e segura do histórico de chats
     chats_para_salvar = copy.deepcopy(st.session_state.chats)
 
-    # 2. Itera sobre a CÓPIA e remove a chave 'dataframe' se ela existir
-    for chat_id in chats_para_salvar:
-        if "dataframe" in chats_para_salvar[chat_id]:
-            del chats_para_salvar[chat_id]["dataframe"]
+    # 2. Itera sobre cada chat na CÓPIA
+    for chat_id, chat_data in chats_para_salvar.items():
+        
+        # 2a. Remove o DataFrame do nível do chat, se existir
+        if "dataframe" in chat_data:
+            del chat_data["dataframe"]
 
-    # 3. Salva a cópia limpa (sem DataFrames) no arquivo JSON
+        # 2b. (NOVA LÓGICA) Filtra a lista de mensagens para remover as que não são serializáveis
+        if "messages" in chat_data:
+            mensagens_serializaveis = []
+            for msg in chat_data["messages"]:
+                # Adiciona a mensagem à nova lista apenas se o tipo NÃO for 'plot'
+                if msg.get("type") != "plot":
+                    mensagens_serializaveis.append(msg)
+            
+            # Substitui a lista de mensagens antiga pela nova, já filtrada
+            chat_data["messages"] = mensagens_serializaveis
+
+    # 3. Salva a cópia totalmente limpa no arquivo JSON
     filename = f"chats_historico_{username}.json"
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(chats_para_salvar, f, ensure_ascii=False, indent=4)
