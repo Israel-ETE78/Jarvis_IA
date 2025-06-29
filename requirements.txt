@@ -7,7 +7,6 @@ python-dotenv
 langdetect
 pandas
 fpdf2
-joblib
 scikit-learn
 sentence-transformers
 requests
