@@ -1,9 +1,25 @@
 {
     "20250628_221055_574750": {
         "title": "Jarvis IA - Welcome!",
-        "messages": [],
+        "messages": [
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Arquivo `cancelamentos_sample.csv` carregado. Agora sou seu assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "gerar resumos"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "# 📊 Dashboard de Insights Rápidos\n\n## 👥 Perfil dos Clientes\n- **Idade Média**: 39,3 anos\n- **Tempo Médio como Cliente**: 31,3 meses\n- **Frequência Média de Uso**: 15,8 vezes\n\n## 📞 Interações e Uso\n- **Média de Ligações para o Call Center**: 11 chamadas\n- **Média de Dias de Atraso**: 13 dias\n\n## 💰 Gastos e Assinaturas\n- **Gasto Total Médio**: $631,76\n- **Tipos de Assinatura**:\n  - **Standard**: 34,1%\n  - **Premium**: 33,3%\n  - **Basic**: 32,6%\n\n## 📅 Duração do Contrato\n- **Anual**: 40,3%\n- **Trimestral**: 39,9%\n- **Mensal**: 19,8%\n\n## 🚨 Cancelamentos\n- **Taxa de Cancelamento**: 56,8%\n\n## 👤 Distribuição por Sexo\n- **Masculino**: 56,5%\n- **Feminino**: 43,5%\n\n---\n\n## 🔍 Insight Estratégico\n**Alerta**: A taxa de cancelamento é alta, com 56,8% dos clientes cancelando seus serviços. Isso pode indicar insatisfação ou falta de valor percebido nos serviços oferecidos. É crucial investigar as causas e implementar estratégias para melhorar a retenção.\n\n---\n\n## 🤔 Perguntas para Aprofundar a Análise\n1. Quais são os principais motivos de cancelamento identificados nas interações com o call center?\n2. Existe uma correlação entre o tipo de assinatura e a taxa de cancelamento?\n3. Como a frequência de uso influencia o total gasto e a probabilidade de cancelamento?"
+            }
+        ],
         "contexto_arquivo": null,
-        "processed_file_name": null,
+        "processed_file_name": "cancelamentos_sample.csv",
         "resumo_curto_prazo": "",
         "ultima_mensagem_falada": null
     }

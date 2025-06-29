@@ -15,4 +15,4 @@ librosa # A biblioteca que está faltando
 soundfile # Dependência importante para o librosa
 numpy
 openpyxl # Para o pandas ler arquivos .xlsx
-plotly==5.22.0
+plotly
