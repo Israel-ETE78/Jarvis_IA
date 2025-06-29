@@ -16,3 +16,7 @@ __pycache__/
 
 # Arquivos do Streamlit
 .streamlit/secrets.toml
+
+# Arquivos sensíveis
+dados/assinaturas.json
+
