@@ -1216,23 +1216,28 @@ with st.sidebar:
                 st.rerun()
 
     # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
-    IS_CLOUD_ENV = not os.getenv("HOME") or "streamlit" in os.getenv("HOME", "").lower()
+    IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets # This line is correct
 
 
     if not IS_CLOUD_ENV:
-        if st.button("🎙️ Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
+        if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
             texto_audio, tom_da_voz = escutar_audio()
-
+            
             if texto_audio:
-                active_chat = st.session_state.chats[st.session_state.current_chat_id]
+                # Passo 1: Adiciona a pergunta do usuário ao histórico para exibição imediata
+                chat_id = st.session_state.current_chat_id
+                active_chat = st.session_state.chats[chat_id]
                 active_chat["messages"].append(
-                    {"role": "user", "type": "text", "content": texto_audio}
-                )
-                salvar_chats(st.session_state["username"])
+                    {"role": "user", "type": "text", "content": texto_audio})
 
+                # Salva o chat imediatamente para garantir que a pergunta apareça
+                salvar_chats(st.session_state["username"])
+                
+                # Passo 2: Agora sim, processa a entrada para gerar a resposta do Jarvis
                 processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
     else:
-        st.sidebar.warning("🎙️ A função de microfone está desativada na versão web.")
+        # Opcional: Mostra um aviso útil para o usuário na versão web
+        st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---
