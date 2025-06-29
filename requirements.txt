@@ -1,4 +1,5 @@
 streamlit
+joblib
 openai
 PyMuPDF # Para a biblioteca fitz
 python-docx
@@ -15,4 +16,3 @@ soundfile # Dependência importante para o librosa
 numpy
 openpyxl # Para o pandas ler arquivos .xlsx
 plotly
-joblib==1.4.2
