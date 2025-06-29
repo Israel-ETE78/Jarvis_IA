@@ -926,7 +926,29 @@ def buscar_na_internet(pergunta_usuario):
         return f"ERRO ao pesquisar na web: {e}"
 
 
-# [SUBSTITUA SUA FUNÇÃO analisar_dados_com_ia POR ESTA VERSÃO APRIMORADA]
+
+
+def executar_analise_profunda(df):
+    """Executa um conjunto de análises de dados e retorna a saída como string."""
+    buffer = io.StringIO()
+    from contextlib import redirect_stdout
+    with redirect_stdout(buffer):
+        print("--- RESUMO ESTATÍSTICO (NUMÉRICO) ---\n")
+
+        print(df.describe())
+        print("\n\n--- RESUMO CATEGÓRICO ---\n")
+        if not df.select_dtypes(include=['object']).empty:
+            print(df.describe(include=['object']))
+        else:
+            print("Nenhuma coluna de texto (categórica) encontrada.")
+        print("\n\n--- CONTAGEM DE VALORES ÚNICOS ---\n")
+        print(df.nunique())
+        print("\n\n--- VERIFICAÇÃO DE DADOS FALTANTES (NULOS) ---\n")
+        print(df.isnull().sum())
+        print("\n\n--- MATRIZ DE CORRELAÇÃO (APENAS NUMÉRICO) ---\n")
+        print(df.corr(numeric_only=True))
+    return buffer.getvalue()
+
 def analisar_dados_com_ia(prompt_usuario, df):
     """
     Usa a IA em um processo de duas etapas:
@@ -935,10 +957,10 @@ def analisar_dados_com_ia(prompt_usuario, df):
     """
     st.info("Gerando e executando análise...")
 
-    # --- ETAPA 1: Gerar o código Python de análise ---
+    
     schema = df.head().to_string()
     
-    # A linha abaixo e todo o bloco de texto foram indentados corretamente
+    
     prompt_gerador_codigo = f"""
 Você é um gerador de código Python para análise de dados com Pandas.
 O usuário tem um dataframe `df` com o seguinte schema:
@@ -1337,7 +1359,7 @@ if 'pdf_para_download' in st.session_state:
         )
 
 # --- ENTRADA DE TEXTO DO USUÁRIO ---
-if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf..."):
+if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox..."):
 
     # Adiciona a mensagem do usuário ao histórico para exibição imediata
     active_chat["messages"].append(
@@ -1347,7 +1369,6 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
     salvar_chats(st.session_state["username"])
 
     # --- PROCESSAMENTO DE COMANDOS ESPECIAIS ---
-    # A estrutura if/elif/else a seguir está CORRETAMENTE aninhada.
     if prompt_usuario.lower().startswith("/lembrese "):
         texto_para_lembrar = prompt_usuario[10:].strip()
         if texto_para_lembrar:
@@ -1386,7 +1407,27 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
                 {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{titulo_documento}'. O botão de download foi exibido."})
             salvar_chats(st.session_state["username"])
         
-        st.rerun()
+            st.rerun()
+
+    elif prompt_usuario.lower().strip() == "/raiox":
+        if active_chat.get("dataframe") is not None:
+            df = active_chat.get("dataframe")
+            with st.spinner("Executando Raio-X completo dos dados..."):
+                
+                resultados_brutos = executar_analise_profunda(df)
+                
+                prompt_interpretador = f"""Você é Jarvis, um analista de dados sênior. O usuário pediu um Raio-X completo do dataset. Abaixo estão os resultados brutos. Sua tarefa é criar um relatório claro e com insights, explicando cada seção (resumo estatístico, categorias, valores únicos, dados faltantes e correlações) para o usuário.\n\n--- DADOS BRUTOS ---\n{resultados_brutos}\n--- FIM DOS DADOS BRUTOS ---"""
+                
+                resposta_interpretada = modelo.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt_interpretador}]
+                ).choices[0].message.content
+
+                active_chat["messages"].append({"role": "assistant", "type": "text", "content": resposta_interpretada})
+                salvar_chats(st.session_state["username"])
+                st.rerun()
+        else:
+            st.warning("Para usar o comando /raiox, por favor, carregue um arquivo de dados primeiro.")
 
     else:
         # Se não for nenhum comando, chama a função de processamento de chat normal

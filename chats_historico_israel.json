@@ -1,19 +1,7 @@
 {
-    "20250629_012241_222427": {
+    "20250629_031911_502054": {
         "title": "Jarvis IA - Welcome!",
-        "messages": [
-            {
-                "role": "user",
-                "type": "text",
-                "content": "do you like book"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oh, the world of books is indeed fascinating, isn't it? They hold an immense reservoir of knowledge, stories, and adventures. I particularly enjoy how they open new dimensions of thought and creativity. Do you have a favorite book or genre that piques your curiosity, my dear?",
-                "origem": "openai"
-            }
-        ],
+        "messages": [],
         "contexto_arquivo": null,
         "processed_file_name": null,
         "resumo_curto_prazo": "",
