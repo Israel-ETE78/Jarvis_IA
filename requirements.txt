@@ -16,3 +16,4 @@ soundfile # Dependência importante para o librosa
 numpy
 openpyxl # Para o pandas ler arquivos .xlsx
 plotly
+joblib
