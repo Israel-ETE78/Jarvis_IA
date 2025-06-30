@@ -9,6 +9,7 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
+import bcrypt
 
 # Carregar .env local se estiver rodando localmente
 load_dotenv()
@@ -66,8 +67,6 @@ with st.form("form_nova_assinatura", clear_on_submit=True):
     nova_senha = st.text_input("Senha", type="password")
     novo_email = st.text_input("E-mail do cliente")
     dias = st.number_input("Duração da assinatura (dias)", value=30, min_value=0)
-    
-    # [NOVA ADIÇÃO] Checkbox para notificação opcional
     notificar_cliente_novo = st.checkbox("📧 Notificar cliente sobre expiração?", value=True)
     
     submitted = st.form_submit_button("Adicionar Assinatura")
@@ -78,19 +77,21 @@ with st.form("form_nova_assinatura", clear_on_submit=True):
             else:
                 ativacao = datetime.now()
                 expiracao = ativacao + timedelta(days=int(dias))
-                ativacao_str = ativacao.strftime("%Y-%m-%d %H:%M:%S")
-                expiracao_str = expiracao.strftime("%Y-%m-%d %H:%M:%S")
-
+                
+                # --- LÓGICA DE HASHING (CRIAÇÃO) ---
+                senha_bytes = nova_senha.encode('utf-8')
+                hash_da_senha = bcrypt.hashpw(senha_bytes, bcrypt.gensalt())
+                
                 assinaturas[novo_usuario] = {
-                    "senha": nova_senha, # Lembrete: Implementar hashing de senha no futuro
-                    "ativacao": ativacao_str,
-                    "expiracao": expiracao_str,
+                    "senha": hash_da_senha.decode('utf-8'), # Salva o hash, não a senha
+                    "ativacao": ativacao.strftime("%Y-%m-%d %H:%M:%S"),
+                    "expiracao": expiracao.strftime("%Y-%m-%d %H:%M:%S"),
                     "email": novo_email,
                     "email_enviado": False,
-                    "notificar_cliente": notificar_cliente_novo # Salva a nova opção
+                    "notificar_cliente": notificar_cliente_novo
                 }
                 salvar_assinaturas(assinaturas)
-                st.success(f"✅ Assinatura para '{novo_usuario}' adicionada.")
+                st.success(f"✅ Assinatura para '{novo_usuario}' adicionada com segurança.")
                 st.rerun()
         else:
             st.warning("⚠️ Preencha todos os campos obrigatórios.")
@@ -99,8 +100,6 @@ st.divider()
 
 # --- Exibir e Gerenciar Assinaturas ---
 st.subheader("📄 Assinaturas Atuais")
-
-# Definindo 'agora' uma vez para toda a página
 agora = datetime.now()
 
 for user, dados in list(assinaturas.items()):
@@ -108,28 +107,56 @@ for user, dados in list(assinaturas.items()):
     
     with st.container(border=True):
         st.markdown(f"#### 👤 `{user}`")
-        col_info, col_botoes = st.columns([3, 1])
+        
+        # --- Seção de Edição (Usa um popover para não poluir a tela) ---
+        with st.popover(f"📝 Editar {user}", use_container_width=True):
+            with st.form(f"form_editar_{user}"):
+                st.write(f"Editando dados de **{user}**")
+                
+                # Para edição de senha, o campo começa vazio por segurança
+                nova_senha_ed = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", key=f"senha_ed_{user}")
+                novo_email_ed = st.text_input("Novo E-mail", value=dados['email'], key=f"email_ed_{user}")
+                notificar_cliente_ed = st.checkbox("Notificar cliente?", value=dados.get("notificar_cliente", True), key=f"notificar_ed_{user}")
 
-        with col_info:
-            st.text(f"E-mail: {dados['email']}")
-            st.text(f"Expira em: {dados['expiracao']}")
-            # [NOVA ADIÇÃO] Mostra o status da notificação
-            notificacao_status = "Ativada" if dados.get("notificar_cliente", True) else "Desativada"
-            st.text(f"Notificação para cliente: {notificacao_status}")
+                if st.form_submit_button("Salvar Alterações"):
+                    # Atualiza a senha apenas se uma nova foi digitada
+                    if nova_senha_ed:
+                        senha_bytes_ed = nova_senha_ed.encode('utf-8')
+                        hash_senha_ed = bcrypt.hashpw(senha_bytes_ed, bcrypt.gensalt())
+                        assinaturas[user]['senha'] = hash_senha_ed.decode('utf-8')
+                        st.success("Senha atualizada com sucesso!")
 
-        with col_botoes:
-            if st.button("❌ Remover", key=f"remover_{user}", use_container_width=True):
+                    # Atualiza os outros campos
+                    assinaturas[user]['email'] = novo_email_ed
+                    assinaturas[user]['notificar_cliente'] = notificar_cliente_ed
+                    
+                    salvar_assinaturas(assinaturas)
+                    st.success("Alterações salvas.")
+                    st.rerun()
+
+        # --- Seção de Informações ---
+        st.text(f"E-mail: {dados['email']}")
+        st.text(f"Expira em: {dados['expiracao']}")
+        notificacao_status = "Ativada" if dados.get("notificar_cliente", True) else "Desativada"
+        st.text(f"Notificação para cliente: {notificacao_status}")
+
+        # --- Botões de Ação Rápida ---
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(f"🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
+                data_base = expiracao if expiracao > agora else agora
+                nova_data = data_base + timedelta(days=30)
+                assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S")
+                assinaturas[user]['email_enviado'] = False # Permite nova notificação
+                salvar_assinaturas(assinaturas)
+                st.success(f"Assinatura de '{user}' renovada.")
+                st.rerun()
+        
+        with col2:
+            if st.button(f"❌ Remover", key=f"remover_{user}", type="primary", use_container_width=True):
                 del assinaturas[user]
                 salvar_assinaturas(assinaturas)
                 st.success(f"Assinatura de '{user}' removida.")
-                st.rerun()
-
-            if st.button("🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
-                nova_data = (expiracao if expiracao > agora else agora) + timedelta(days=30)
-                assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S")
-                assinaturas[user]['email_enviado'] = False
-                salvar_assinaturas(assinaturas)
-                st.success(f"Assinatura de '{user}' renovada.")
                 st.rerun()
         
         # --- Lógica de Notificação Atualizada ---
