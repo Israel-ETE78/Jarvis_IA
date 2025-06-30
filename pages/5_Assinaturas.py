@@ -61,13 +61,26 @@ def enviar_email(destinatario, assunto, mensagem):
 st.title("📋 Gerenciador de Assinaturas - Jarvis IA")
 assinaturas = carregar_assinaturas()
 
+# Em pages/5_Gerenciamento_de_Assinaturas.py
+
 st.subheader("➕ Adicionar Nova Assinatura")
 with st.form("form_nova_assinatura", clear_on_submit=True):
     novo_usuario = st.text_input("Usuário")
     nova_senha = st.text_input("Senha", type="password")
     novo_email = st.text_input("E-mail do cliente")
-    dias = st.number_input("Duração da assinatura (dias)", value=30, min_value=0)
-    notificar_cliente_novo = st.checkbox("📧 Notificar cliente sobre expiração?", value=True)
+
+    # --- LÓGICA ATUALIZADA PARA EXPIRAÇÃO ---
+    sem_limite = st.checkbox("✅ Assinatura sem limite de expiração (vitalícia)")
+    
+    # O campo de dias fica desativado se a opção "sem_limite" for marcada
+    dias = st.number_input(
+        "Duração da assinatura (dias)", 
+        value=30, 
+        min_value=0, 
+        disabled=sem_limite
+    )
+    
+    notificar_cliente_novo = st.checkbox("📧 Notificar cliente sobre expiração?", value=True, disabled=sem_limite)
     
     submitted = st.form_submit_button("Adicionar Assinatura")
     if submitted:
@@ -76,22 +89,29 @@ with st.form("form_nova_assinatura", clear_on_submit=True):
                 st.error(f"Usuário '{novo_usuario}' já existe.")
             else:
                 ativacao = datetime.now()
-                expiracao = ativacao + timedelta(days=int(dias))
-                
-                # --- LÓGICA DE HASHING (CRIAÇÃO) ---
+                ativacao_str = ativacao.strftime("%Y-%m-%d %H:%M:%S")
+
+                # Define a data de expiração com base na seleção do checkbox
+                if sem_limite:
+                    expiracao_str = "9999-12-31 23:59:59"
+                else:
+                    expiracao = ativacao + timedelta(days=int(dias))
+                    expiracao_str = expiracao.strftime("%Y-%m-%d %H:%M:%S")
+
+                # Lógica de hashing da senha
                 senha_bytes = nova_senha.encode('utf-8')
                 hash_da_senha = bcrypt.hashpw(senha_bytes, bcrypt.gensalt())
                 
                 assinaturas[novo_usuario] = {
-                    "senha": hash_da_senha.decode('utf-8'), # Salva o hash, não a senha
-                    "ativacao": ativacao.strftime("%Y-%m-%d %H:%M:%S"),
-                    "expiracao": expiracao.strftime("%Y-%m-%d %H:%M:%S"),
+                    "senha": hash_da_senha.decode('utf-8'),
+                    "ativacao": ativacao_str,
+                    "expiracao": expiracao_str,
                     "email": novo_email,
                     "email_enviado": False,
-                    "notificar_cliente": notificar_cliente_novo
+                    "notificar_cliente": notificar_cliente_novo if not sem_limite else False
                 }
                 salvar_assinaturas(assinaturas)
-                st.success(f"✅ Assinatura para '{novo_usuario}' adicionada com segurança.")
+                st.success(f"✅ Assinatura para '{novo_usuario}' adicionada.")
                 st.rerun()
         else:
             st.warning("⚠️ Preencha todos os campos obrigatórios.")
