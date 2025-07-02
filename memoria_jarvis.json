@@ -107,15 +107,11 @@
             "pergunta": "Obrigado",
             "respostas": [
                 {
-                    "texto": "Sempre que precisar, estarei aqui por você.",
+                    "texto": "Por nada. sempre que precisar, estarei aqui por você.",
                     "tom": "neutro"
                 },
                 {
-                    "texto": "Disponível para o próximo comando.",
-                    "tom": "neutro"
-                },
-                {
-                    "texto": "Pronto. Pronta para a próxima ação.",
+                    "texto": "Por nada. disponível para o próximo comando.",
                     "tom": "neutro"
                 },
                 {
@@ -502,6 +498,17 @@
             "respostas": [
                 {
                     "texto": "Alagoas é um destino incrível e oferece muitas opções bacanas para as férias! Aqui estão algumas dicas:\n\n1. **Maceió**: A capital tem praias urbanas lindas, como Ponta Verde e Pajuçara, onde você pode fazer passeios de jangada e aproveitar as feirinhas de artesanato.\n\n2. **Maragogi**: Conhecida como o \"Caribe Brasileiro\", Maragogi é famosa pelas suas piscinas naturais e águas cristalinas. Não perca os passeios de catamarã até as galés nos recifes de corais.\n\n3. **São Miguel dos Milagres**: Esse é um destino perfeito se você quer sossego, com praias paradisíacas e menos movimentadas. Pode também explorar a Rota Ecológica, com praias como Toque e Patacho.\n\n4. **Dunas de Marapé**: Um belo passeio para quem curte ecoturismo, combinando praias, mangues e dunas. Você pode conhecer o encontro do rio com o mar.\n\n5. **Praia do Gunga**: Famosa por suas falésias coloridas, passeios de buggy e a vista deslumbrante do mirante.\n\nSe precisar de mais informações ou tiver outra curiosidade sobre Alagoas, é só me avisar! 😊",
+                    "tom": "neutro"
+                }
+            ]
+        }
+    ],
+    "tecnologia": [
+        {
+            "pergunta": "O que é uma inteligência artificial? ",
+            "respostas": [
+                {
+                    "texto": "Inteligência artificial, é um ramo da ciência da computação que se dedica a criar sistemas capazes de realizar tarefas que normalmente exigiriam inteligência humana. Isso inclui raciocínio, aprendizado, reconhecimento de padrões, compreensão de linguagem natural, resolução de problemas e até mesmo tomada de decisão. A ideia é construir máquinas que possam simular aspectos do pensamento e comportamento humano, trazendo inovação e facilitando muitas atividades do nosso dia a dia. Fascinante, não é?",
                     "tom": "neutro"
                 }
             ]

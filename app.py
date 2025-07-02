@@ -30,6 +30,9 @@ import librosa
 import io
 import soundfile
 from fpdf.enums import XPos, YPos
+from openai import RateLimitError
+import time
+from supabase import create_client, Client
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
 ADMIN_USERNAME = st.secrets.get("ADMIN_USERNAME", os.getenv("ADMIN_USERNAME"))
@@ -42,7 +45,12 @@ if not ADMIN_USERNAME:
 if not check_password():
     st.stop()  # Interrompe a execução do script se o login falhar
 
-
+# --- Define visibilidade padrão do campo de feedback ---
+if st.session_state.get("username") != ADMIN_USERNAME:
+    st.session_state["show_feedback_form"] = True
+else:
+    st.session_state["show_feedback_form"] = True
+    
 # ==============================================================================
 # === 3. CONEXÃO INTELIGENTE DE API (LOCAL E NUVEM)
 # ==============================================================================
@@ -70,6 +78,27 @@ if not api_key:
 # Inicializa o modelo da OpenAI com a chave correta
 modelo = OpenAI(api_key=api_key)
 
+def chamar_openai_com_retries(modelo_openai, mensagens, modelo="gpt-4o", max_tentativas=3, pausa_segundos=5):
+    """
+    Faz a chamada à API da OpenAI com tentativas automáticas em caso de RateLimitError.
+    """
+    for tentativa in range(1, max_tentativas + 1):
+        try:
+            st.info(f"⏳ Enviando solicitação à OpenAI (tentativa {tentativa})...")
+            resposta = modelo_openai.chat.completions.create(
+                model=modelo,
+                messages=mensagens
+            )
+            return resposta  # sucesso!
+        except RateLimitError:
+            st.warning(f"⚠️ Limite de requisições atingido. Tentando novamente em {pausa_segundos} segundos...")
+            time.sleep(pausa_segundos)
+        except Exception as e:
+            st.error(f"❌ Erro inesperado: {e}")
+            break
+
+    st.error("❌ Tentativas esgotadas. Aguardando você tentar novamente mais tarde.")
+    return None
 
 # ==============================================================================
 # === 4. CONFIGURAÇÃO DE LOGS
@@ -85,19 +114,9 @@ def setup_logging():
         encoding='utf-8'
     )
 
-# Chame a função uma vez no início do script para configurar
-setup_logging()
-
-
-# ==============================================================================
-# === 5. DEFINIÇÃO DAS FUNÇÕES DO APLICATIVO
-# ==============================================================================
-# O resto do seu código (a partir de @st.cache_resource) começa aqui...
-# Chame a função uma vez no início do script para configurar
 setup_logging()
 
 # --- CARREGAR O MODELO E FERRAMENTAS ---
-
 
 @st.cache_resource
 def carregar_modelos_locais():
@@ -654,10 +673,18 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     mensagens_para_api.extend(historico_chat)
 
     # Chamada final para a OpenAI
-    resposta_modelo = modelo.chat.completions.create(
-        messages=mensagens_para_api,
-        model="gpt-4o"
-    )
+    resposta_modelo = chamar_openai_com_retries(
+       modelo_openai=modelo,
+       mensagens=mensagens_para_api,
+       modelo="gpt-4o"
+   )
+    
+    if resposta_modelo is None:
+       return {
+        "texto": "Desculpe, não consegui obter resposta no momento. Tente novamente em instantes.",
+        "origem": "erro_api"
+    }
+    
     resposta_ia = resposta_modelo.choices[0].message.content
     return {"texto": resposta_ia, "origem": "openai_web" if 'contexto_da_web' in locals() else 'openai'}
 
@@ -784,6 +811,17 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
         "content": dict_resposta["texto"],
         "origem": dict_resposta["origem"]
     })
+
+    # --- LÓGICA DE TÍTULO AUTOMÁTICO ---
+    # Se a conversa tem exatamente 2 mensagens e o título ainda é o padrão...
+    if len(active_chat["messages"]) == 2 and active_chat["title"] == "Novo Chat":
+        # Usamos um spinner para uma melhor UX enquanto o título é gerado
+        with st.spinner("Criando título para o chat..."):
+            mensagens_para_titulo = active_chat["messages"]
+            novo_titulo = gerar_titulo_conversa_com_ia(mensagens_para_titulo)
+            active_chat["title"] = novo_titulo
+    
+    # Salva o chat (com o novo título, se tiver sido gerado)
     salvar_chats(st.session_state["username"])
     st.rerun()
 
@@ -815,6 +853,36 @@ def adicionar_a_memoria(pergunta, resposta):
     except Exception as e:
         st.error(f"Erro ao salvar na memória: {e}")
 
+def salvar_feedback(username, rating, comment):
+    """Salva o feedback do usuário em um arquivo JSON."""
+    feedback_data = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "username": username,
+        "rating": rating,
+        "comment": comment
+    }
+    
+    caminho_arquivo = "dados/feedback.json"
+    os.makedirs("dados", exist_ok=True) # Garante que a pasta 'dados' exista
+    
+    dados_existentes = []
+    # Verifica se o arquivo existe e não está vazio
+    if os.path.exists(caminho_arquivo) and os.path.getsize(caminho_arquivo) > 0:
+        with open(caminho_arquivo, "r", encoding="utf-8") as f:
+            try:
+                dados_existentes = json.load(f)
+            except json.JSONDecodeError:
+                # Se o arquivo estiver corrompido ou mal formatado, começa uma nova lista
+                dados_existentes = []
+    
+    # Garante que estamos adicionando a uma lista
+    if not isinstance(dados_existentes, list):
+        dados_existentes = []
+
+    dados_existentes.append(feedback_data)
+    
+    with open(caminho_arquivo, "w", encoding="utf-8") as f:
+        json.dump(dados_existentes, f, indent=4, ensure_ascii=False)
 
 def gerar_resumo_curto_prazo(historico_chat):
     """Gera um resumo da conversa recente usando a OpenAI."""
@@ -851,9 +919,40 @@ def gerar_resumo_curto_prazo(historico_chat):
         print(f"Erro ao gerar resumo: {e}")
         return ""  # Retorna vazio em caso de erro
 
+def gerar_titulo_conversa_com_ia(mensagens):
+    """Usa a IA para criar um título curto para a conversa."""
+    
+    # Prepara o histórico apenas com o conteúdo de texto para a IA
+    historico_para_titulo = [f"{msg['role']}: {msg['content']}" for msg in mensagens if msg.get('type') == 'text']
+    conversa_inicial = "\n".join(historico_para_titulo)
+
+    prompt = f"""
+    Abaixo está o início de uma conversa entre um usuário e um assistente de IA. 
+    Sua tarefa é criar um título curto e conciso em português (máximo de 5 palavras) que resuma o tópico principal da conversa.
+    Responda APENAS com o título, sem nenhuma outra palavra ou pontuação.
+
+    CONVERSA:
+    {conversa_inicial}
+
+    TÍTULO CURTO:
+    """
+
+    try:
+        resposta_modelo = modelo.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=15,
+            temperature=0.2
+        )
+        titulo = resposta_modelo.choices[0].message.content.strip().replace('"', '')
+        # Garante que o título não seja muito longo
+        return titulo if titulo else "Chat"
+    except Exception as e:
+        print(f"Erro ao gerar título: {e}")
+        return "Chat" # Retorna um título padrão em caso de erro
+    
+    
 # NOVA FUNÇÃO 1: O "DETECTOR DE ATUALIDADES"
-
-
 def precisa_buscar_na_web(pergunta_usuario):
     """
     Usa a OpenAI para decidir rapidamente se uma pergunta requer busca na web.
@@ -1056,7 +1155,7 @@ def create_new_chat():
     """Cria um novo chat com todos os campos necessários."""
     chat_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     st.session_state.chats[chat_id] = {
-        "title": "Jarvis IA - Welcome!",
+        "title": "Novo Chat",
         "messages": [],
         "contexto_arquivo": None,
         "processed_file_name": None,
@@ -1105,27 +1204,53 @@ active_chat = st.session_state.chats[chat_id]
 
 
 
+# [SUBSTITUA ESTE BLOCO INTEIRO NO SEU app.py]
+
 with st.sidebar:
     st.write("### 🤖 Jarvis IA")
 
+ # <<< ADICIONE ESTA LINHA PARA EXIBIR A IMAGEM >>>
+# Define a largura da imagem em pixels
+    st.image("assets/inco2.png", width=150) 
+    
+    # --- CONSTRUÇÃO MANUAL DA NAVEGAÇÃO ---
     st.sidebar.title("Navegação")
     st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
     
     st.sidebar.divider()
     st.sidebar.header("Painel do Usuário")
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
+    st.sidebar.page_link("pages/4_Suporte_e_Ajuda.py", label="Suporte e Ajuda", icon="💡")
 
-    #if st.session_state.get("username") == ADMIN_USERNAME:
-    #    st.sidebar.divider()
-    #    st.sidebar.header("Painel do Admin")
-    #    st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
-    #    st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
+    # --- PAINEL DO ADMIN (SÓ APARECE SE FOR O ADMIN) ---
+    if st.session_state.get("username") == ADMIN_USERNAME:
+        st.sidebar.divider()
+        st.sidebar.header("Painel do Admin")
+        st.sidebar.page_link("pages/1_Gerenciar_Memoria.py", label="Gerenciar Memória", icon="🧠")
+        st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
+        st.sidebar.page_link("pages/5_Gerenciamento_de_Assinaturas.py", label="Gerenciar Assinaturas", icon="🔑")
+        st.sidebar.page_link("pages/6_Visualizar_Feedback.py", label="Visualizar Feedback", icon="📊")
     
+    # --- RESTO DA SIDEBAR (VISÍVEL PARA TODOS) ---
     st.sidebar.divider()
     
     if st.button("➕ Novo Chat", use_container_width=True, type="primary"):
         create_new_chat()
         st.rerun()
+
+    # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
+    IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
+    if not IS_CLOUD_ENV:
+        if st.button("🎙️Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
+            texto_audio, tom_da_voz = escutar_audio()
+            if texto_audio:
+                active_chat = st.session_state.chats[st.session_state.current_chat_id]
+                active_chat["messages"].append(
+                    {"role": "user", "type": "text", "content": texto_audio})
+                salvar_chats(st.session_state["username"])
+                processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
+    else:
+        st.sidebar.warning("A função de microfone está desativada na versão web.", icon="🎙️")
 
     voz_ativada = st.checkbox(
         "🔊 Ouvir respostas do Jarvis", value=False, key="voz_ativada")
@@ -1150,21 +1275,38 @@ with st.sidebar:
                     st.rerun()
             with col2:
                 with st.popover("✏️", use_container_width=True):
-                    new_title = st.text_input(
-                        "Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
+                    new_title = st.text_input("Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
                     if st.button("Salvar", key=f"save_rename_{id}"):
                         st.session_state.chats[id]["title"] = new_title
                         salvar_chats(st.session_state["username"])
                         st.rerun()
             with col3:
                 with st.popover("🗑️", use_container_width=True):
-                    st.write(
-                        f"Tem certeza que deseja excluir '{chat_data['title']}'?")
+                    st.write(f"Tem certeza que deseja excluir '{chat_data['title']}'?")
                     if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
                         delete_chat(id)
     st.divider()
 
+if st.session_state.get("show_feedback_form", False) and st.session_state.get("username") != ADMIN_USERNAME:
+    with st.expander("⭐ Deixe seu Feedback", expanded=True):
+        st.write("Sua opinião é importante para a evolução do Jarvis!")
+        
+        # Adicionado clear_on_submit=True para limpar o formulário após o envio
+        with st.form("sidebar_feedback_form", clear_on_submit=True):
+            rating = st.slider("Sua nota:", 1, 5, 3, key="feedback_rating")
+            comment = st.text_area("Comentários (opcional):", key="feedback_comment")
+            
+            # Apenas UM botão de submissão dentro do formulário
+            submitted = st.form_submit_button("Enviar Feedback", use_container_width=True, type="primary")
+            if submitted:
+                salvar_feedback(st.session_state["username"], rating, comment)
+                st.toast("Obrigado pelo seu feedback!", icon="💖")
+                st.session_state["show_feedback_form"] = False
+                st.rerun()
+
+
     with st.expander("📂 Anexar Arquivos"):
+        # Seu código para anexar arquivos vai aqui, ele já está correto
         tipos_dados = ["csv", "xlsx", "xls", "json"]
         tipos_documentos = [
             "pdf", "docx", "txt", "py", "js", "ts", "html", "htm", "css", 
@@ -1237,29 +1379,6 @@ with st.sidebar:
                 create_new_chat()
                 st.rerun()
 
-    # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
-    IS_CLOUD_ENV = "OPENAI_API_KEY" in st.secrets # This line is correct
-
-
-    if not IS_CLOUD_ENV:
-        if st.button("🎙️Falar", key=f"mic_btn_{chat_id}"):
-            texto_audio, tom_da_voz = escutar_audio()
-            
-            if texto_audio:
-                # Passo 1: Adiciona a pergunta do usuário ao histórico para exibição imediata
-                chat_id = st.session_state.current_chat_id
-                active_chat = st.session_state.chats[chat_id]
-                active_chat["messages"].append(
-                    {"role": "user", "type": "text", "content": texto_audio})
-
-                # Salva o chat imediatamente para garantir que a pergunta apareça
-                salvar_chats(st.session_state["username"])
-                
-                # Passo 2: Agora sim, processa a entrada para gerar a resposta do Jarvis
-                processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
-    else:
-        # Opcional: Mostra um aviso útil para o usuário na versão web
-        st.sidebar.warning("A função de microfone (falar) está desativada na versão web.", icon="🎙️")
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---

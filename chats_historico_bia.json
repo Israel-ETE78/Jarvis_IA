@@ -1,10 +1,16 @@
 {
-    "20250623_182143_304896": {
-        "title": "Nova Conversa",
-        "messages": [],
-        "contexto_arquivo": "",
-        "ultima_mensagem_falada": null,
+    "20250701_160211_876690": {
+        "title": "Novo Chat",
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "/lembrese gosto de chapeu"
+            }
+        ],
+        "contexto_arquivo": null,
         "processed_file_name": null,
-        "resumo_curto_prazo": ""
+        "resumo_curto_prazo": "",
+        "ultima_mensagem_falada": null
     }
 }
