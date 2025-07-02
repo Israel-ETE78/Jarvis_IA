@@ -7,19 +7,18 @@ secondaryBackgroundColor = "#003049"
 textColor = "#FFFFFF"
 font = "sans serif"
 
+# Conteúdo para o arquivo .streamlit/config.toml
+
 [client]
 # Desativa a navegação automática da sidebar
 showSidebarNavigation = false
 
 [server]
-# Usa um sistema de observação de arquivos mais estável para evitar erros
+# Usa um sistema de observação de arquivos mais estável para evitar erros no Windows
 fileWatcherType = "poll"
 
-# Ignora arquivos específicos para melhorar a performance
+# Ignora arquivos e pastas específicos para melhorar a performance
 folderWatchBlacklist = [
     "jarvis_log.txt",
-    "memoria_jarvis.json",
-    "dados/",
-    "__pycache__/",
-    ".git/"
+    "dados/"
 ]
