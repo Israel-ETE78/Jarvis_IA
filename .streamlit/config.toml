@@ -1,4 +1,4 @@
-# [VERSÃO CORRETA E FINAL do config.toml]
+# .streamlit/config.toml
 
 [theme]
 primaryColor = "#00BFFF"
@@ -23,3 +23,8 @@ folderWatchBlacklist = [
     "__pycache__/",
     ".git/"
 ]
+
+[runner]
+# Especifica a versão do Python a ser usada pelo Streamlit Cloud
+# Altere para "3.11" ou "3.12" se 3.10 não for suportado ou se você preferir uma versão mais recente estável.
+python_version = "3.10"
