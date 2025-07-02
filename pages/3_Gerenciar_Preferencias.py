@@ -2,11 +2,10 @@ import streamlit as st
 from auth import check_password
 from utils import carregar_preferencias, salvar_preferencias
 
-# 1. ESSENCIAL: Garante que o usuário está logado para acessar esta página
+# Verificação de login
 if not check_password():
     st.stop()
 
-# Pega o nome de usuário da sessão
 username = st.session_state.get("username")
 
 if not username:
@@ -15,61 +14,59 @@ if not username:
 
 st.set_page_config(page_title="Minhas Preferências", layout="wide")
 st.title(f"⚙️ Gerenciar Preferências de {username.capitalize()}")
-
 st.write("Aqui você pode ver, editar e remover as informações que o Jarvis guardou sobre você.")
 
-# Carrega as preferências atuais do usuário
+# 🔁 Carrega preferências a cada execução
 preferencias = carregar_preferencias(username)
 
 if not preferencias:
     st.info("Você ainda não tem nenhuma preferência salva. Use o comando `/lembrese` no chat para adicionar uma!")
 else:
-    # Exibe cada preferência com opções para editar e excluir
-    for topico, valor in list(preferencias.items()):
+    for topico, valor in preferencias.items():
+        # Cria chaves seguras para os widgets
+        chave_segura = topico.replace(" ", "_").replace("ç", "c").replace("ã", "a").lower()
+        key_valor = f"value_edit_{chave_segura}"
+        key_delete = f"delete_btn_{chave_segura}"
+
         col1, col2, col3 = st.columns([0.4, 0.4, 0.2])
 
         with col1:
-            st.text_input("Tópico", value=topico, disabled=True, key=f"topic_disp_{topico}")
+            st.text_input("Tópico", value=topico, disabled=True, key=f"topic_disp_{chave_segura}")
 
         with col2:
-            # O valor é editável
-            novo_valor = st.text_input("Valor", value=valor, key=f"value_edit_{topico}")
+            novo_valor = st.text_input("Valor", value=valor, key=key_valor)
             if novo_valor != valor:
                 preferencias[topico] = novo_valor
                 salvar_preferencias(preferencias, username)
                 st.toast(f"Preferência '{topico}' atualizada!", icon="💾")
-                st.rerun() # Recarrega para garantir consistência
+                st.rerun()
 
         with col3:
-            # Botão para deletar a preferência
-            st.write("") # Espaçamento
-            st.write("") # Espaçamento
-            if st.button("🗑️ Excluir", key=f"delete_btn_{topico}", use_container_width=True):
+            st.write("")
+            st.write("")
+            if st.button("🗑️ Excluir", key=key_delete, use_container_width=True):
                 del preferencias[topico]
                 salvar_preferencias(preferencias, username)
+                # Limpa os widgets da sessão
+                st.session_state.pop(key_valor, None)
+                st.session_state.pop(f"topic_disp_{chave_segura}", None)
                 st.toast(f"Preferência '{topico}' esquecida.", icon="👍")
                 st.rerun()
 
 st.divider()
+st.subheader("➕ Adicionar Nova Preferência")
 
-# --- SEÇÃO CORRIGIDA E SIMPLIFICADA ---
-
-st.subheader("Adicionar Nova Preferência")
-
-# A mágica acontece aqui no parâmetro 'clear_on_submit=True'
 with st.form(key="add_pref_form", clear_on_submit=True):
-    novo_topico = st.text_input("Novo Tópico (Ex: cor favorita, filme preferido, etc.)")
-    novo_valor_form = st.text_input("Valor (Ex: azul, O Poderoso Chefão, etc.)")
-    
+    novo_topico = st.text_input("Novo Tópico (Ex: cor favorita, comida preferida...)")
+    novo_valor = st.text_input("Valor (Ex: azul, pizza...)")
     submitted = st.form_submit_button("Adicionar Preferência")
 
     if submitted:
-        if novo_topico and novo_valor_form:
-            # Carrega as preferências, adiciona a nova e salva
-            preferencias_atuais = carregar_preferencias(username)
-            preferencias_atuais[novo_topico.lower()] = novo_valor_form
-            salvar_preferencias(preferencias_atuais, username)
-            st.success(f"Preferência '{novo_topico}' adicionada com sucesso!")
-            # Não precisamos fazer mais nada, o rerun é implícito e o form limpará os campos.
+        if novo_topico and novo_valor:
+            preferencias = carregar_preferencias(username)  # Garante dados atualizados
+            preferencias[novo_topico.strip().lower()] = novo_valor.strip()
+            salvar_preferencias(preferencias, username)
+            st.success(f"✅ Preferência '{novo_topico}' adicionada!")
+            st.rerun()
         else:
-            st.warning("Por favor, preencha tanto o tópico quanto o valor.")
+            st.warning("⚠️ Por favor, preencha todos os campos.")

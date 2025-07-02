@@ -1,16 +1,25 @@
-#[ui]
-#hideSidebarNav = true
+# [VERSÃO CORRETA E FINAL do config.toml]
+
+[theme]
+primaryColor = "#00BFFF"
+backgroundColor = "#030210"
+secondaryBackgroundColor = "#003049"
+textColor = "#FFFFFF"
+font = "sans serif"
+
+[client]
+# Desativa a navegação automática da sidebar
+showSidebarNavigation = false
 
 [server]
-# Diz ao zelador (Streamlit) para ignorar esses arquivos e pastas
-# ao procurar por mudanças no código. Isso libera o "limite de vigias".
+# Usa um sistema de observação de arquivos mais estável para evitar erros
+fileWatcherType = "poll"
+
+# Ignora arquivos específicos para melhorar a performance
 folderWatchBlacklist = [
-    "jarvis_log.txt",           # Seu arquivo de log
-    "memoria_jarvis.json",      # Sua memória principal
-    "preferencias_*.json",      # Arquivos de preferência de usuários (o * é para "qualquer coisa aqui")
-    "chats_historico_*.json",   # Arquivos de histórico de chat (o * é para "qualquer coisa aqui")
-    "vetores_perguntas_v2.npy", # Arquivo do seu modelo de memória
-    "dados_conhecimento_v2.joblib", # Outro arquivo do seu modelo de memória
-    "__pycache__/",             # Pasta de cache do Python (não precisa vigiar)
-    ".git/"                     # Pasta do Git (não precisa vigiar)
+    "jarvis_log.txt",
+    "memoria_jarvis.json",
+    "dados/",
+    "__pycache__/",
+    ".git/"
 ]
