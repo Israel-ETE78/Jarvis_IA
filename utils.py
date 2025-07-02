@@ -26,7 +26,7 @@ def carregar_preferencias(username):
     """
     if supabase:
         try:
-            response = supabase.table('preferencias').select('dados_preferencias').eq('nome de usuário', username).execute()
+            response = supabase.table('preferencias').select('dados_preferencias').eq('username', username).execute()
             if response.data:
                 print(f"Preferências de '{username}' carregadas do Supabase.")
                 return response.data[0]['dados_preferencias']
