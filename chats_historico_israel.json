@@ -1,30 +1,7 @@
 {
-    "20250701_223824_615643": {
-        "title": "Cumprimento e Oferta de Ajuda",
-        "messages": [
-            {
-                "role": "user",
-                "type": "text",
-                "content": "oi"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
-                "origem": "local"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "boa noite"
-            },
-            {
-                "role": "assistant",
-                "type": "text",
-                "content": "Boa noite! Como está indo a sua noite? Algo que eu possa fazer por você?",
-                "origem": "openai"
-            }
-        ],
+    "20250702_091138_480984": {
+        "title": "Novo Chat",
+        "messages": [],
         "contexto_arquivo": null,
         "processed_file_name": null,
         "resumo_curto_prazo": "",
