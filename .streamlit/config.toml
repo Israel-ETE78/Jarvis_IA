@@ -14,11 +14,9 @@ font = "sans serif"
 showSidebarNavigation = false
 
 [server]
-# Usa um sistema de observação de arquivos mais estável para evitar erros no Windows
+# Usa um sistema de observação de arquivos mais estável para evitar erros
 fileWatcherType = "poll"
 
-# Ignora arquivos e pastas específicos para melhorar a performance
-folderWatchBlacklist = [
-    "jarvis_log.txt",
-    "dados/"
-]
+# Adiciona a seção abaixo para fixar a versão do Python
+[runner]
+pythonVersion = "3.10"
