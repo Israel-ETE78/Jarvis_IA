@@ -1291,12 +1291,10 @@ if st.session_state.get("show_feedback_form", False) and st.session_state.get("u
     with st.expander("⭐ Deixe seu Feedback", expanded=True):
         st.write("Sua opinião é importante para a evolução do Jarvis!")
         
-        # Adicionado clear_on_submit=True para limpar o formulário após o envio
         with st.form("sidebar_feedback_form", clear_on_submit=True):
             rating = st.slider("Sua nota:", 1, 5, 3, key="feedback_rating")
             comment = st.text_area("Comentários (opcional):", key="feedback_comment")
             
-            # Apenas UM botão de submissão dentro do formulário
             submitted = st.form_submit_button("Enviar Feedback", use_container_width=True, type="primary")
             if submitted:
                 salvar_feedback(st.session_state["username"], rating, comment)
@@ -1304,80 +1302,80 @@ if st.session_state.get("show_feedback_form", False) and st.session_state.get("u
                 st.session_state["show_feedback_form"] = False
                 st.rerun()
 
+# This block will now always be visible, regardless of the user being admin or not.
+with st.expander("📂 Anexar Arquivos"):
+    # Seu código para anexar arquivos vai aqui, ele já está correto
+    tipos_dados = ["csv", "xlsx", "xls", "json"]
+    tipos_documentos = [
+        "pdf", "docx", "txt", "py", "js", "ts", "html", "htm", "css", 
+        "php", "java", "kt", "c", "cpp", "h", "cs", "rb", "go", 
+        "swift", "sql", "xml", "yaml", "yml", "md", "sh", "bat", "ps1", "R", "pl", "lua"
+    ]
+    
+    chat_id_for_key = st.session_state.current_chat_id
+    
+    arquivo = st.file_uploader(
+        "📄 Documento, Código ou Dados (.csv, .xlsx, .json)",
+        type=tipos_dados + tipos_documentos,
+        key=f"uploader_doc_{chat_id_for_key}"
+    )
 
-    with st.expander("📂 Anexar Arquivos"):
-        # Seu código para anexar arquivos vai aqui, ele já está correto
-        tipos_dados = ["csv", "xlsx", "xls", "json"]
-        tipos_documentos = [
-            "pdf", "docx", "txt", "py", "js", "ts", "html", "htm", "css", 
-            "php", "java", "kt", "c", "cpp", "h", "cs", "rb", "go", 
-            "swift", "sql", "xml", "yaml", "yml", "md", "sh", "bat", "ps1", "R", "pl", "lua"
-        ]
+    if arquivo and arquivo.name != active_chat.get("processed_file_name"):
+        active_chat["contexto_arquivo"] = None
+        active_chat["dataframe"] = None
+        file_extension = arquivo.name.split('.')[-1].lower()
+
+        if file_extension in tipos_dados:
+            with st.spinner(f"Analisando '{arquivo.name}'..."):
+                try:
+                    df = None
+                    if file_extension == 'csv': df = pd.read_csv(arquivo)
+                    elif file_extension in ['xlsx', 'xls']: df = pd.read_excel(arquivo, engine='openpyxl')
+                    elif file_extension == 'json': df = pd.read_json(arquivo)
+                    
+                    if df is not None:
+                        active_chat["dataframe"] = df
+                        active_chat["processed_file_name"] = arquivo.name
+                        st.success(f"Arquivo '{arquivo.name}' carregado! Jarvis está em modo de análise.")
+                        active_chat["messages"].append({
+                            "role": "assistant", "type": "text", 
+                            "content": f"Arquivo `{arquivo.name}` carregado. Agora sou sua assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
+                        })
+                except Exception as e:
+                    st.error(f"Erro ao carregar o arquivo de dados: {e}")
+        else:
+            active_chat["contexto_arquivo"] = extrair_texto_documento(arquivo)
+            active_chat["processed_file_name"] = arquivo.name
         
-        chat_id_for_key = st.session_state.current_chat_id
-        
-        arquivo = st.file_uploader(
-            "📄 Documento, Código ou Dados (.csv, .xlsx, .json)",
-            type=tipos_dados + tipos_documentos,
-            key=f"uploader_doc_{chat_id_for_key}"
-        )
+        salvar_chats(st.session_state["username"])
+        st.rerun()
 
-        if arquivo and arquivo.name != active_chat.get("processed_file_name"):
-            active_chat["contexto_arquivo"] = None
-            active_chat["dataframe"] = None
-            file_extension = arquivo.name.split('.')[-1].lower()
-
-            if file_extension in tipos_dados:
-                with st.spinner(f"Analisando '{arquivo.name}'..."):
-                    try:
-                        df = None
-                        if file_extension == 'csv': df = pd.read_csv(arquivo)
-                        elif file_extension in ['xlsx', 'xls']: df = pd.read_excel(arquivo, engine='openpyxl')
-                        elif file_extension == 'json': df = pd.read_json(arquivo)
-                        
-                        if df is not None:
-                            active_chat["dataframe"] = df
-                            active_chat["processed_file_name"] = arquivo.name
-                            st.success(f"Arquivo '{arquivo.name}' carregado! Jarvis está em modo de análise.")
-                            active_chat["messages"].append({
-                                "role": "assistant", "type": "text", 
-                                "content": f"Arquivo `{arquivo.name}` carregado. Agora sou sua assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
-                            })
-                    except Exception as e:
-                        st.error(f"Erro ao carregar o arquivo de dados: {e}")
-            else:
-                active_chat["contexto_arquivo"] = extrair_texto_documento(arquivo)
-                active_chat["processed_file_name"] = arquivo.name
-            
-            salvar_chats(st.session_state["username"])
+    imagem = st.file_uploader(
+        "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id_for_key}")
+    if imagem and imagem.name != active_chat.get("processed_file_name"):
+        st.image(imagem, width=200)
+        active_chat["contexto_arquivo"] = analisar_imagem(imagem)
+        active_chat["processed_file_name"] = imagem.name
+        salvar_chats(st.session_state["username"])
+        st.rerun()
+    
+    if active_chat.get("dataframe") is not None:
+        st.info("Jarvis em 'Modo de Análise de Dados'.")
+        with st.expander("Ver resumo dos dados"):
+            st.dataframe(active_chat["dataframe"].head())
+            buffer = io.StringIO()
+            active_chat["dataframe"].info(buf=buffer)
+            st.text(buffer.getvalue())
+        if st.button("🗑️ Sair do Modo de Análise", type="primary", key=f"forget_btn_data_{chat_id}"):
+            create_new_chat()
             st.rerun()
 
-        imagem = st.file_uploader(
-            "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id_for_key}")
-        if imagem and imagem.name != active_chat.get("processed_file_name"):
-            st.image(imagem, width=200)
-            active_chat["contexto_arquivo"] = analisar_imagem(imagem)
-            active_chat["processed_file_name"] = imagem.name
-            salvar_chats(st.session_state["username"])
+    elif active_chat.get("contexto_arquivo"):
+        st.info("Jarvis está em 'Modo de Análise de Documento'.")
+        st.text_area("Conteúdo extraído:", value=active_chat["contexto_arquivo"], height=200, key=f"contexto_arquivo_{chat_id}")
+        if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_doc_{chat_id}"):
+            create_new_chat()
             st.rerun()
-        
-        if active_chat.get("dataframe") is not None:
-            st.info("Jarvis em 'Modo de Análise de Dados'.")
-            with st.expander("Ver resumo dos dados"):
-                st.dataframe(active_chat["dataframe"].head())
-                buffer = io.StringIO()
-                active_chat["dataframe"].info(buf=buffer)
-                st.text(buffer.getvalue())
-            if st.button("🗑️ Sair do Modo de Análise", type="primary", key=f"forget_btn_data_{chat_id}"):
-                create_new_chat()
-                st.rerun()
-
-        elif active_chat.get("contexto_arquivo"):
-            st.info("Jarvis está em 'Modo de Análise de Documento'.")
-            st.text_area("Conteúdo extraído:", value=active_chat["contexto_arquivo"], height=200, key=f"contexto_arquivo_{chat_id}")
-            if st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_doc_{chat_id}"):
-                create_new_chat()
-                st.rerun()
 
 
 
