@@ -1,5 +1,5 @@
 # ==============================================================================
-# === 1. IMPORTAÇÕES DE BIBLIOTECAS
+# === 1. IMPORTAÇÕES DE BIBLIOTERAS (REVISADO PARA NUVEM)
 # ==============================================================================
 import logging
 import streamlit as st
@@ -9,7 +9,7 @@ import json
 from difflib import SequenceMatcher
 import fitz  # PyMuPDF
 import docx
-import speech_recognition as sr
+import speech_recognition as sr # Mantenha APENAS se for usar para transcrever arquivos de áudio UPLOADED pelo usuário. Se não, pode remover.
 from dotenv import load_dotenv
 import os
 import datetime
@@ -26,26 +26,28 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import requests
-import librosa
 import io
-import soundfile
+# As bibliotecas librosa, io (se usado apenas para áudio), soundfile, PyAudio foram removidas
+# do contexto do microfone e processamento de áudio em tempo real.
 from fpdf.enums import XPos, YPos
 from openai import RateLimitError
 import time
 from supabase import create_client, Client
+
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
+# ==============================================================================
 ADMIN_USERNAME = st.secrets.get("ADMIN_USERNAME", os.getenv("ADMIN_USERNAME"))
 if not ADMIN_USERNAME:
     st.error("Nome de usuário admin não encontrado! Defina ADMIN_USERNAME em .env ou secrets.")
     st.stop()
-# ==============================================================================
 
 # Executa a verificação de login primeiro
 if not check_password():
     st.stop()  # Interrompe a execução do script se o login falhar
 
 # --- Define visibilidade padrão do campo de feedback ---
+# Ajustado para que o feedback possa ser sempre visível se desejar, ou controlado por admin
 if st.session_state.get("username") != ADMIN_USERNAME:
     st.session_state["show_feedback_form"] = True
 else:
@@ -122,16 +124,17 @@ setup_logging()
 def carregar_modelos_locais():
     """
     Carrega os modelos locais apenas uma vez e guarda em cache.
+    Removido o carregamento de modelo_emocoes_voz.joblib pois não há funcionalidade de áudio.
     """
     print("Executando CARGA PESADA do cérebro local (isso só deve aparecer uma vez)...")
     try:
-        modelo_emb = SentenceTransformer(
-            'paraphrase-multilingual-MiniLM-L12-v2')
+        modelo_emb = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
         vetores_p = np.load('vetores_perguntas_v2.npy')
         base_conhecimento = joblib.load('dados_conhecimento_v2.joblib')
+        
         return modelo_emb, vetores_p, base_conhecimento
     except Exception as e:
-        # Se der erro, retorna None para tudo
+        print(f"Erro ao carregar modelos locais: {e}")
         return None, None, None
 
 
@@ -186,7 +189,6 @@ def criar_pdf(texto_corpo, titulo_documento):
         print("AVISO: Arquivos de fonte não encontrados. Verifique a pasta 'assets'. Usando Helvetica.")
         FONT_FAMILY = 'Helvetica'
 
-    # O resto da função continua exatamente igual...
     pdf.set_font(FONT_FAMILY, 'B', 18)
     pdf.multi_cell(0, 10, titulo_documento, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.ln(15)
@@ -354,8 +356,6 @@ def detectar_tom_usuario(pergunta_usuario):
         return "" # Retorna vazio em caso de erro
 
 
-# [SUBSTITUA a antiga função detectar_idioma POR ESTA]
-
 def detectar_idioma_com_ia(texto_usuario):
     """Usa a própria OpenAI para detectar o idioma, um método mais preciso."""
     if not texto_usuario.strip():
@@ -384,6 +384,10 @@ def detectar_idioma_com_ia(texto_usuario):
 
 
 def preparar_texto_para_fala(texto):
+    """
+    Prepara o texto para ser falado (removendo markdown, emojis, etc.).
+    Esta função é usada pelo TTS (Text-to-Speech) do navegador, que não depende de bibliotecas Python.
+    """
     # Remove links mantendo apenas o texto visível
     texto = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', texto)
 
@@ -426,58 +430,9 @@ def preparar_texto_para_fala(texto):
 
     return texto
 
-def extrair_features(data, sample_rate):
-    """
-    Extrai 110 features de dados de áudio para ser compatível com o modelo treinado.
-    """
-    # MFCC (40) -> 40 mean + 40 std = 80 features
-    mfcc = librosa.feature.mfcc(y=data, sr=sample_rate, n_mfcc=40)
-    # Chroma (12) -> 12 mean + 12 std = 24 features
-    chroma = librosa.feature.chroma_stft(y=data, sr=sample_rate)
-    # ZCR -> 1 mean + 1 std = 2 features
-    zcr = librosa.feature.zero_crossing_rate(data)
-    # RMS -> 1 mean + 1 std = 2 features
-    rms = librosa.feature.rms(y=data)
-    # Spectral Centroid -> 1 mean + 1 std = 2 features
-    centroid = librosa.feature.spectral_centroid(y=data, sr=sample_rate)
-    
-    # Total: 80 + 24 + 2 + 2 + 2 = 110 features
-    features = np.hstack([
-        np.mean(mfcc, axis=1), np.std(mfcc, axis=1),
-        np.mean(chroma, axis=1), np.std(chroma, axis=1),
-        np.mean(zcr), np.std(zcr),
-        np.mean(rms), np.std(rms),
-        np.mean(centroid), np.std(centroid)
-    ])
-    return features
-
-def analisar_tom_de_voz(audio_data_wav):
-    """
-    Analisa os dados de áudio WAV para detectar uma emoção usando um modelo pré-treinado.
-    """
-    try:
-        # Carrega o modelo pré-treinado do arquivo
-        modelo = joblib.load("modelo_emocoes_voz.joblib")
-
-        # Converte os dados de áudio em um formato que o librosa possa ler
-        data, sample_rate = soundfile.read(io.BytesIO(audio_data_wav))
-        
-        # Extrai as características do áudio
-        features = extrair_features(data, sample_rate)
-        
-        # Usa o modelo para prever a emoção
-        # O .reshape(1, -1) é necessário para formatar os dados para o modelo
-        resultado = modelo.predict(features.reshape(1, -1))
-        
-        # Retorna a emoção prevista (ex: 'feliz', 'triste', 'neutro')
-        return resultado[0]
-
-    except FileNotFoundError:
-        print("AVISO: Arquivo 'modelo_emocoes_voz.joblib' não encontrado. Análise de tom de voz desativada.")
-        return "neutro" # Retorna neutro se o modelo não for encontrado
-    except Exception as e:
-        print(f"Erro na análise de tom de voz real: {e}")
-        return "neutro" # Retorna um valor seguro em caso de outro erro
+# As funções de áudio (extrair_features, analisar_tom_de_voz, escutar_audio)
+# que dependem de librosa, soundfile, PyAudio, etc., foram removidas deste arquivo.
+# Elas não são necessárias para o funcionamento na nuvem.
 
 def carregar_memoria():
     try:
@@ -486,12 +441,9 @@ def carregar_memoria():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-
 def salvar_memoria(memoria):
     with open("memoria_jarvis.json", "w", encoding="utf-8") as f:
         json.dump(memoria, f, ensure_ascii=False, indent=4)
-
-
 
 def processar_comando_lembrese(texto_do_comando):
     """Usa a OpenAI para extrair um tópico e valor de um texto e salvar nas preferências."""
@@ -534,8 +486,6 @@ def processar_comando_lembrese(texto_do_comando):
     except Exception as e:
         st.error(f"Ocorreu um erro ao tentar memorizar a preferência: {e}")
 
-
-# NOVO carregar_chats
 def carregar_chats(username):
     """Carrega os chats de um arquivo JSON específico do usuário."""
     if not username:
@@ -548,8 +498,6 @@ def carregar_chats(username):
     except (FileNotFoundError, json.JSONDecodeError):
         return {} # Se o arquivo do usuário não existir, retorna um histórico vazio.
 
-
-# NOVO salvar_chats
 def salvar_chats(username):
     """
     Salva os chats do usuário, ignorando objetos não-serializáveis como 
@@ -604,16 +552,11 @@ def buscar_resposta_local(pergunta_usuario, memoria, limiar=0.9):
         return escolher_resposta_por_contexto(melhor_match)
     return None
 
-
-# [SUBSTITUA SUA FUNÇÃO responder_com_inteligencia POR ESTA VERSÃO APRIMORADA]
-
-# [VERSÃO DE DEBUG da função responder_com_inteligencia]
-
-# [VERSÃO FINAL da função responder_com_inteligencia]
-
 def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_contexto="", tom_de_voz_detectado=None):
     """
     Decide como responder, com uma instrução de idioma reforçada e precisa.
+    Removida a lógica de adaptar resposta ao 'tom_de_voz_detectado'
+    já que a funcionalidade de áudio foi removida.
     """
     # --- ETAPA 0: DETECÇÃO DE IDIOMA PRECISA COM IA ---
     idioma_da_pergunta = detectar_idioma_com_ia(pergunta_usuario)
@@ -660,8 +603,9 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
         
         prompt_sistema = f"{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente prestativo."
         
-        if tom_de_voz_detectado and tom_de_voz_detectado != "neutro":
-            prompt_sistema += f"\nO tom de voz do usuário parece ser '{tom_de_voz_detectado}'. Adapte sua resposta a isso."
+        # REMOVIDO: Linha que usava tom_de_voz_detectado
+        # if tom_de_voz_detectado and tom_de_voz_detectado != "neutro":
+        #    prompt_sistema += f"\nO tom de voz do usuário parece ser '{tom_de_voz_detectado}'. Adapte sua resposta a isso."
         if tom_do_usuario:
             prompt_sistema += f"\nO tom do texto dele parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso."
         if preferencias:
@@ -683,7 +627,7 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
        return {
         "texto": "Desculpe, não consegui obter resposta no momento. Tente novamente em instantes.",
         "origem": "erro_api"
-    }
+       }
     
     resposta_ia = resposta_modelo.choices[0].message.content
     return {"texto": resposta_ia, "origem": "openai_web" if 'contexto_da_web' in locals() else 'openai'}
@@ -705,46 +649,10 @@ def analisar_imagem(image_file):
         st.error(f"Ocorreu um erro ao analisar a imagem: {e}")
         return "Não foi possível analisar a imagem."
 
-
-def escutar_audio():
-    idioma_para_reconhecimento = st.session_state.get("idioma_fala", "pt-BR")
-    recognizer = sr.Recognizer()
-    try:
-        with sr.Microphone() as source:
-            st.info(f"Fale agora (em {idioma_para_reconhecimento})...")
-            recognizer.adjust_for_ambient_noise(source)
-            audio_capturado = recognizer.listen(source)
-
-        st.info("Processando áudio...")
-
-        # Etapa 1: Transcrever o texto
-        texto_reconhecido = recognizer.recognize_google(
-            audio_capturado, language=idioma_para_reconhecimento)
-        st.success("Áudio transcrito!")
-
-        # Etapa 2: Analisar o tom de voz
-        tom_de_voz = analisar_tom_de_voz(audio_capturado.get_wav_data())
-        st.info(f"Tom de voz detectado (exemplo): {tom_de_voz}")
-
-        # Etapa 3: Retornar AMBOS os resultados
-        return texto_reconhecido, tom_de_voz
-
-    except sr.UnknownValueError:
-        st.warning("Não consegui entender o que você disse.")
-        # Retorna DOIS valores em caso de erro
-        return None, None
-    except sr.RequestError as e:
-        st.error(f"Não foi possível se conectar ao serviço de reconhecimento; {e}")
-        # Retorna DOIS valores em caso de erro
-        return None, None
-    except Exception as e:
-        st.error(f"Ocorreu um erro ao acessar o microfone: {e}")
-        print(f"ERRO DETALHADO DO MICROFONE: {e}")
-        # Retorna DOIS valores em caso de erro
-        return None, None
-
-
-# [SUBSTITUA SUA FUNÇÃO processar_entrada_usuario POR ESTA]
+# REMOVIDO: A função escutar_audio foi totalmente removida, pois não haverá microfone.
+# def escutar_audio():
+#     # ... (código da função escutar_audio) ...
+#     pass
 
 def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     chat_id = st.session_state.current_chat_id
@@ -802,8 +710,9 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     else:
         historico_final = historico_chat
 
+    # MODIFICADO: Chamada a responder_com_inteligencia, tom_voz agora sempre será None
     dict_resposta = responder_com_inteligencia(
-        prompt_usuario, modelo, historico_final, resumo_contexto, tom_de_voz_detectado=tom_voz)
+        prompt_usuario, modelo, historico_final, resumo_contexto, tom_de_voz_detectado=None)
 
     active_chat["messages"].append({
         "role": "assistant",
@@ -825,7 +734,7 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
     salvar_chats(st.session_state["username"])
     st.rerun()
 
-   
+    
 
 def adicionar_a_memoria(pergunta, resposta):
     """Adiciona um novo par de pergunta/resposta à memória local."""
@@ -1002,7 +911,7 @@ def buscar_na_internet(pergunta_usuario):
     if not api_key_serper:
         return "ERRO: A chave da API Serper não foi configurada."
 
-    url = "https://google.serper.dev/search"
+    url = "[https://google.serper.dev/search](https://google.serper.dev/search)"
     payload = json.dumps({"q": pergunta_usuario, "gl": "br", "hl": "pt-br"})
     headers = {'X-API-KEY': api_key_serper, 'Content-Type': 'application/json'}
 
@@ -1029,6 +938,7 @@ def buscar_na_internet(pergunta_usuario):
 
 def executar_analise_profunda(df):
     """Executa um conjunto de análises de dados e retorna a saída como string."""
+    # Note: import io from the top of the file as needed by other functions too
     buffer = io.StringIO()
     from contextlib import redirect_stdout
     with redirect_stdout(buffer):
@@ -1201,11 +1111,6 @@ chat_id = st.session_state.current_chat_id
 active_chat = st.session_state.chats[chat_id]
 
 
-
-
-
-# [SUBSTITUA ESTE BLOCO INTEIRO NO SEU app.py]
-
 with st.sidebar:
     st.write("### 🤖 Jarvis IA")
 
@@ -1238,31 +1143,24 @@ with st.sidebar:
         create_new_chat()
         st.rerun()
 
-    # --- LÓGICA DE PROTEÇÃO DO MICROFONE ---
-    IS_CLOUD_ENV = os.getenv("STREAMLIT_SERVER_RUN_ON_CLOUD") == "true"
-    if not IS_CLOUD_ENV:
-        if st.button("🎙️Falar", use_container_width=True, key=f"mic_btn_{chat_id}"):
-            texto_audio, tom_da_voz = escutar_audio()
-            if texto_audio:
-                active_chat = st.session_state.chats[st.session_state.current_chat_id]
-                active_chat["messages"].append(
-                    {"role": "user", "type": "text", "content": texto_audio})
-                salvar_chats(st.session_state["username"])
-                processar_entrada_usuario(texto_audio, tom_voz=tom_da_voz)
-    else:
-        st.sidebar.warning("A função de microfone está desativada na versão web.", icon="🎙️")
-
+    # REMOVIDO: LÓGICA DE PROTEÇÃO DO MICROFONE E BOTÃO "Falar"
+    # Pois o microfone não será usado na nuvem.
+    
+    # A funcionalidade Text-to-Speech (TTS) do navegador não requer bibliotecas Python problemáticas
+    # e pode ser mantida.
     voz_ativada = st.checkbox(
         "🔊 Ouvir respostas do Jarvis", value=False, key="voz_ativada")
     st.divider()
 
     st.write("#### Configurações de Voz")
+    # O seletor de idioma da fala pode ser mantido para o TTS (voz do Jarvis),
+    # mesmo sem entrada de microfone.
     idioma_selecionado = st.selectbox(
-        "Idioma da Fala (Entrada)",
+        "Idioma da Fala (Saída)", # MODIFICADO: Rótulo para deixar claro que é saída
         options=['pt-BR', 'en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT'],
         index=0,
         key="idioma_fala",
-        help="Escolha o idioma que você irá falar no microfone."
+        help="Escolha o idioma para o Jarvis falar suas respostas."
     )
 
     st.write("#### Histórico de Chats")
@@ -1302,7 +1200,6 @@ if st.session_state.get("show_feedback_form", False) and st.session_state.get("u
                 st.session_state["show_feedback_form"] = False
                 st.rerun()
 
-# This block will now always be visible, regardless of the user being admin or not.
 with st.expander("📂 Anexar Arquivos"):
     # Seu código para anexar arquivos vai aqui, ele já está correto
     tipos_dados = ["csv", "xlsx", "xls", "json"]
@@ -1378,57 +1275,56 @@ with st.expander("📂 Anexar Arquivos"):
             st.rerun()
 
 
-
 # --- ÁREA PRINCIPAL DO CHAT ---
 st.write(f"### {active_chat['title']}")
 
 for i, mensagem in enumerate(active_chat["messages"]):
     with st.chat_message(mensagem["role"]):
-        # --- NOVA LÓGICA PARA EXIBIR GRÁFICOS ---
         if mensagem.get("type") == "plot":
             st.plotly_chart(mensagem["content"], use_container_width=True)
-        # --- FIM DA NOVA LÓGICA ---
         elif mensagem.get("type") == "image":
             st.image(mensagem["content"], caption=mensagem.get("prompt", "Imagem gerada"))
         else:
             st.write(mensagem["content"]) # Lógica existente para texto
 
-# ... no loop principal de chat
 # Verifica se a mensagem veio da OpenAI E SE o usuário logado é o admin
         if mensagem.get("origem") == "openai" and st.session_state.get("username") == ADMIN_USERNAME:
             # Pega a pergunta do usuário que gerou esta resposta
-            pergunta_original = active_chat["messages"][i-1]["content"]
-            resposta_original = mensagem["content"]
+            # Garante que i-1 não seja negativo (para a primeira mensagem do assistente)
+            if i > 0:
+                pergunta_original = active_chat["messages"][i-1]["content"]
+                resposta_original = mensagem["content"]
 
-            # Cria colunas para alinhar os ícones dos botões
-            cols = st.columns([1, 1, 10])  # A última coluna é um espaçador
+                # Cria colunas para alinhar os ícones dos botões
+                cols = st.columns([1, 1, 10])
 
-            # Coluna 1: Botão Salvar
-            with cols[0]:
-                if st.button("✅", key=f"save_{i}", help="Salvar resposta na memória"):
-                    adicionar_a_memoria(pergunta_original, resposta_original)
-                    mensagem["origem"] = "openai_curado"
-                    salvar_chats(st.session_state["username"])
-                    st.rerun()
+                # Coluna 1: Botão Salvar
+                with cols[0]:
+                    if st.button("✅", key=f"save_{i}", help="Salvar resposta na memória"):
+                        adicionar_a_memoria(pergunta_original, resposta_original)
+                        mensagem["origem"] = "openai_curado"
+                        salvar_chats(st.session_state["username"])
+                        st.rerun()
 
-            # Coluna 2: Botão Editar (com Popover)
-            with cols[1]:
-                with st.popover("✏️", help="Editar antes de salvar"):
-                    with st.form(key=f"edit_form_{i}"):
-                        st.write(
-                            "Ajuste a pergunta e/ou a resposta antes de salvar.")
-                        pergunta_editada = st.text_area(
-                            "Pergunta:", value=pergunta_original, height=100)
-                        resposta_editada = st.text_area(
-                            "Resposta:", value=resposta_original, height=200)
-                        if st.form_submit_button("Salvar Edição"):
-                            adicionar_a_memoria(
-                                pergunta_editada, resposta_editada)
-                            mensagem["origem"] = "openai_curado"
-                            salvar_chats(st.session_state["username"])
-                            st.rerun()
+                # Coluna 2: Botão Editar (com Popover)
+                with cols[1]:
+                    with st.popover("✏️", help="Editar antes de salvar"):
+                        with st.form(key=f"edit_form_{i}"):
+                            st.write(
+                                "Ajuste a pergunta e/ou a resposta antes de salvar.")
+                            pergunta_editada = st.text_area(
+                                "Pergunta:", value=pergunta_original, height=100)
+                            resposta_editada = st.text_area(
+                                "Resposta:", value=resposta_original, height=200)
+                            if st.form_submit_button("Salvar Edição"):
+                                adicionar_a_memoria(
+                                    pergunta_editada, resposta_editada)
+                                mensagem["origem"] = "openai_curado"
+                                salvar_chats(st.session_state["username"])
+                                st.rerun()
 
 # Lógica de Text-to-Speech (continua aqui)
+# Esta parte não depende de librosa ou PyAudio, pois usa o TTS nativo do navegador.
 if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant" and voz_ativada:
     if active_chat["messages"][-1].get("type") == "text":
         resposta_ia = active_chat["messages"][-1]["content"]
@@ -1446,22 +1342,6 @@ if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant
             active_chat["ultima_mensagem_falada"] = resposta_ia
             salvar_chats(st.session_state["username"])
 
-if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant" and voz_ativada:
-    if active_chat["messages"][-1].get("type") == "text":
-        resposta_ia = active_chat["messages"][-1]["content"]
-        if resposta_ia != active_chat.get("ultima_mensagem_falada"):
-            idioma_detectado = detectar_idioma_com_ia(resposta_ia)
-            texto_limpo_para_fala = preparar_texto_para_fala(resposta_ia)
-            resposta_formatada_para_voz = json.dumps(texto_limpo_para_fala)
-            st.components.v1.html(f"""
-            <script>
-                function getVoices() {{ return new Promise(resolve => {{ let voices = speechSynthesis.getVoices(); if (voices.length) {{ resolve(voices); return; }} speechSynthesis.onvoiceschanged = () => {{ voices = speechSynthesis.getVoices(); resolve(voices); }}; }}); }}
-                async function speak() {{ const text = {resposta_formatada_para_voz}; const idioma = '{idioma_detectado}'; if (!text || text.trim() === '') return; const allVoices = await getVoices(); let voicesForLang = allVoices.filter(v => v.lang.startsWith(idioma)); let desiredVoice; if (voicesForLang.length > 0) {{ if (idioma === 'pt') {{ const ptFemaleNames = ['Microsoft Francisca Online (Natural) - Portuguese (Brazil)', 'Microsoft Maria - Portuguese (Brazil)', 'Google português do Brasil', 'Luciana', 'Joana']; for (const name of ptFemaleNames) {{ desiredVoice = voicesForLang.find(v => v.name === name); if (desiredVoice) break; }} }} if (!desiredVoice) {{ const femaleMarkers = ['Female', 'Feminino', 'Femme', 'Mujer']; desiredVoice = voicesForLang.find(v => femaleMarkers.some(marker => v.name.includes(marker))); }} if (!desiredVoice) {{ desiredVoice = voicesForLang.find(v => v.default); }} if (!desiredVoice) {{ desiredVoice = voicesForLang.find(v => !v.localService); }} if (!desiredVoice) {{ desiredVoice = voicesForLang[0]; }} }} const utterance = new SpeechSynthesisUtterance(text); if (desiredVoice) {{ utterance.voice = desiredVoice; utterance.lang = desiredVoice.lang; }} else {{ utterance.lang = idioma; }} utterance.pitch = 1.0; utterance.rate = 1.0; speechSynthesis.cancel(); speechSynthesis.speak(utterance); }}
-                speak();
-            </script>
-            """, height=0)
-            active_chat["ultima_mensagem_falada"] = resposta_ia
-            salvar_chats(st.session_state["username"])
 
 # --- Bloco para Exibição Persistente do Botão de Download ---
 # Ele verifica em toda recarga se deve mostrar o botão.
@@ -1472,7 +1352,7 @@ if 'pdf_para_download' in st.session_state:
             data=st.session_state['pdf_para_download'],
             file_name=st.session_state['pdf_filename'],
             mime="application/pdf",
-            on_click=limpar_pdf_da_memoria  # <-- A MÁGICA ACONTECE AQUI
+            on_click=limpar_pdf_da_memoria
         )
 
 # --- ENTRADA DE TEXTO DO USUÁRIO ---
@@ -1523,7 +1403,7 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
             active_chat["messages"].append(
                 {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{titulo_documento}'. O botão de download foi exibido."})
             salvar_chats(st.session_state["username"])
-        
+            
             st.rerun()
 
     elif prompt_usuario.lower().strip() == "/raiox":

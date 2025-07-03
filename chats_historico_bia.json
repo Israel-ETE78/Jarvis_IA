@@ -6,6 +6,11 @@
                 "role": "user",
                 "type": "text",
                 "content": "/lembrese gosto de chapeu"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "/lembrese gosto de chapéu"
             }
         ],
         "contexto_arquivo": null,
