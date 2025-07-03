@@ -21,6 +21,13 @@ username = st.session_state.get("username")
 if username != ADMIN_USERNAME:
     st.error("⛔ Acesso restrito! Esta página é exclusiva para o administrador.")
     st.stop()
+    
+    # --- Botão de voltar para o chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
 
 # --- Configurações e Funções Auxiliares ---
 CAMINHO_ARQUIVO = "dados/assinaturas.json"

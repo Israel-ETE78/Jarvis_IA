@@ -13,6 +13,14 @@ if not username:
     st.stop()
 
 st.set_page_config(page_title="Minhas Preferências", layout="wide")
+
+# --- Botão de voltar para o chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
+
 st.title(f"⚙️ Gerenciar Preferências de {username.capitalize()}")
 st.write("Aqui você pode ver, editar e remover as informações que o Jarvis guardou sobre você.")
 

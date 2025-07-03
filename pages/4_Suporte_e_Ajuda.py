@@ -3,6 +3,13 @@ import streamlit as st
 # Configuração da página
 st.set_page_config(page_title="Suporte - Jarvis IA", page_icon="💡")
 
+# --- Botão discreto para voltar ao chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
+
 # --- Conteúdo da Página ---
 
 st.title("💡 Central de Ajuda e Suporte do Jarvis")

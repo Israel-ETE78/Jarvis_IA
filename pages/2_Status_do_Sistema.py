@@ -16,17 +16,16 @@ from auth_admin_pages import require_admin_access # Import the new function
 # === IMPORTANT: Apply the admin access check at the very beginning ===
 require_admin_access()
 
+# --- Botão de voltar para o chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
+
 st.title("Painel de Diagnóstico do Jarvis")
 st.write("Informações de diagnóstico exclusivas para administradores.")
 
-# ... rest of your existing code for displaying system status ...
-# (e.g., logging display, system metrics)
-
-# --- CAMINHO ROBUSTO PARA A RAIZ DO PROJETO ---
-# Isso garante que sempre encontraremos os arquivos na pasta principal
-# __file__ se refere a este arquivo atual (2_Status_do_Sistema.py)
-# os.path.dirname() pega o diretório dele (a pasta 'pages')
-# os.path.join(..., "..") "sobe" um nível para a pasta 'Jarvis_IA'
 RAIZ_PROJETO = os.path.join(os.path.dirname(__file__), "..")
 
 # --- CARREGAR AS VARIÁVEIS DE AMBIENTE ---

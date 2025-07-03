@@ -17,6 +17,13 @@ if username != ADMIN_USERNAME:
     st.error("⛔ Acesso restrito! Esta página é exclusiva para o administrador.")
     st.stop()
 
+# --- Botão de voltar para o chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
+
 # --- Função para Carregar os Dados ---
 @st.cache_data(ttl=60)  # Cache para não recarregar o arquivo a cada segundo
 def carregar_feedback():

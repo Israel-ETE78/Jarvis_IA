@@ -10,6 +10,13 @@ from auth_admin_pages import require_admin_access # Import the new function
 # === IMPORTANT: Apply the admin access check at the very beginning ===
 require_admin_access()
 
+# --- Botão de voltar para o chat principal ---
+with st.container():
+    col1, col2 = st.columns([0.85, 0.15])
+    with col2:
+        if st.button("⬅️ Voltar", use_container_width=True):
+            st.switch_page("app.py")
+
 st.title("Gerenciador da Memória de Longo Prazo")
 st.write("Conteúdo exclusivo para administradores da memória.")
 
