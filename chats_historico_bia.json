@@ -1,18 +1,7 @@
 {
-    "20250701_160211_876690": {
+    "20250703_172248_645892": {
         "title": "Novo Chat",
-        "messages": [
-            {
-                "role": "user",
-                "type": "text",
-                "content": "/lembrese gosto de chapeu"
-            },
-            {
-                "role": "user",
-                "type": "text",
-                "content": "/lembrese gosto de chapéu"
-            }
-        ],
+        "messages": [],
         "contexto_arquivo": null,
         "processed_file_name": null,
         "resumo_curto_prazo": "",
