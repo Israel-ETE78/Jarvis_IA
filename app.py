@@ -9,7 +9,6 @@ import json
 from difflib import SequenceMatcher
 import fitz  # PyMuPDF
 import docx
-import speech_recognition as sr # Mantenha APENAS se for usar para transcrever arquivos de áudio UPLOADED pelo usuário. Se não, pode remover.
 from dotenv import load_dotenv
 import os
 import datetime
