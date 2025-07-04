@@ -18,5 +18,5 @@ __pycache__/
 .streamlit/secrets.toml
 
 # Arquivos sensíveis
-dados/assinaturas.json
+
 

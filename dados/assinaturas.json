@@ -1,0 +1,26 @@
+{
+    "leidy": {
+        "senha": "$2b$12$4uI59AHTdxm.OrF/y.QZV.bEJQHXP4Z/2f.ti9HFL2lOmxn18CjLW",
+        "ativacao": "2025-06-30 01:53:26",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "bia": {
+        "senha": "$2b$12$5CTIXVvo9ylPuEIOZHJ4n.Q76zzJUOktsUInrC.JP5nbYOA47UPiS",
+        "ativacao": "2025-06-30 01:54:36",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "debora": {
+        "senha": "$2b$12$EAA7mNb8EB7QVsMob8rPGeP5Gk9ABlvuPVr402BOCA2fKriwCPba6",
+        "ativacao": "2025-07-04 15:35:55",
+        "expiracao": "2025-07-05 15:35:55",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": true
+    }
+}
