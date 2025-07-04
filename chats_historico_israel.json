@@ -1,7 +1,19 @@
 {
-    "20250704_133222_735920": {
-        "title": "Novo Chat",
-        "messages": [],
+    "20250704_171506_839085": {
+        "title": "Futebol e posição favorita",
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "o que gosto de jogar?"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Você gosta de jogar bola! Isso é uma ótima maneira de se manter ativo e se divertir. Qual é a sua posição favorita em campo?",
+                "origem": "openai"
+            }
+        ],
         "contexto_arquivo": null,
         "processed_file_name": null,
         "resumo_curto_prazo": "",

@@ -15,5 +15,5 @@ langdetect
 supabase==1.2.0
 bcrypt==4.1.3
 plotly==5.22.0
-
+cryptography
 

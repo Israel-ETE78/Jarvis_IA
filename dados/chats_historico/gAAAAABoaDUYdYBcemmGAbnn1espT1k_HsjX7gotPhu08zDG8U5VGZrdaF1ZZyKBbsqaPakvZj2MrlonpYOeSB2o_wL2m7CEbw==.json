@@ -1,0 +1,33 @@
+{
+    "20250704_160841_210419": {
+        "title": "Saudação e oferta de ajuda",
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "oi"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+                "origem": "local"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "qual o seu proposito"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Ajudar você com informações, responder perguntas e facilitar suas tarefas diárias. Estou aqui para tornar sua vida mais fácil e produtiva.",
+                "origem": "local"
+            }
+        ],
+        "contexto_arquivo": null,
+        "processed_file_name": null,
+        "resumo_curto_prazo": "",
+        "ultima_mensagem_falada": null
+    }
+}
