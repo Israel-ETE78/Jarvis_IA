@@ -1,26 +1,34 @@
 {
-    "gAAAAABoaDTXoMjQWR2AhKd5Wtfk6ITv-ct-6KTlyhwmFGwKHNylD2xh4NjKE_t0tQdIzKpl3g5YUA6Co67yEkTa1NUdwMGCbw==": {
+    "leidy": {
         "senha": "$2b$12$4uI59AHTdxm.OrF/y.QZV.bEJQHXP4Z/2f.ti9HFL2lOmxn18CjLW",
-        "ativacao": "gAAAAABoaDTXpVPbv4q-5CmXUkLBbBLKAifF0ioXHMgko37x1ialAf91Gx6f21xmRV56JPIxlnWzEXUuaZsMj3XIW1FSk0K2TozZS7TpZZuYf3JJvEGplfo=",
-        "expiracao": "gAAAAABoaDTX9wWZkXWKSrhq7RwN3HQlMd37CezFJJyIL9_rdBSQF1wgRAtkcM3XKbr1MWmLppp7hDf1izV_ll5UB0B-qzyuoDg-Qiu5yWB343v2wvCkyPQ=",
-        "email": "gAAAAABoaDTXS2Lc4C0eTl4whyr41sH4OgMD5H49K3n5AN1iNxJ0Re3uNKcZMgoTU2t36ijc_Ypm9iNKU6sYEfZh0YjEN8EzW-gmwv8IbZ2D6oA9pdbb0NI=",
-        "email_enviado": "gAAAAABoaDTXWlstltM1a5RZlA9o8bZ8eDQnQhxkRqjmjG4g6wBsiufrpXmldAmyaOW50g-nV6N0pW8CbjlwM7nwquKBar47dw==",
-        "notificar_cliente": "gAAAAABoaDTXoOzp8WlL4NtFu-ZTKyM8OuuWl2V98zoPWQrPSxTIZNh3UToNlwUgnEHW1wklgrzt8qCZ49invoE95G833Y5jZg=="
+        "ativacao": "2025-06-30 01:53:26",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
     },
-    "gAAAAABoaDTXbfTCooPkMmqaF7ygGJWdAqJzBPRQH4rlRV2efCtJ9rmjlbgONMcIqXvnQPgDjVTP4oqMjymd6a7KNKg_RG5v8Q==": {
+    "bia": {
         "senha": "$2b$12$5CTIXVvo9ylPuEIOZHJ4n.Q76zzJUOktsUInrC.JP5nbYOA47UPiS",
-        "ativacao": "gAAAAABoaDTX7b1b1MYT-LM5n7C6OMyBsSRjFbRj2GVpwWpfSVIJF7YvuOR8uZY6b6FQAnzQkzDEGCjzOj3yEq0f4qlg0hfh6mzW2XEa_tMXJ1l_ruqGZS4=",
-        "expiracao": "gAAAAABoaDTX41CLf_NBjLWfjSvMSMaDpZ--KPpPDa-mkm0jVNmT5zt9n8VJfxvM1n4GCNj8M_R5_sAkLcqV9ZYvBY_D6lOD_tPs2TQsphzuclRf2mYcJc8=",
-        "email": "gAAAAABoaDTX4NaTWhiDIRrhvx1h47DHrzANuU2mxsAC5vWLVbc58b6BTKH3BWLz4dxlapGF9GTwz_KHJbO8tKhMzN1nEau-DOOaDgozWmFNjoS3MC3DOvE=",
-        "email_enviado": "gAAAAABoaDTXDLkiPZ7nZXm9QMz5-nMGx96PI2OmuaoSfCmFa4b1lzZ1Kd2DAcBgntZhRezaPIh06Kzux3efQBwaHLqpZ8jS8w==",
-        "notificar_cliente": "gAAAAABoaDTXRsBG7iUlPRrugwuiYGZjtx4ybVxovNc2l81rFkaTSiE08Bpy9qqkMk5r-1NfjubWyJ03dZ1CbxDPCppPVXwNTA=="
+        "ativacao": "2025-06-30 01:54:36",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
     },
-    "gAAAAABoaDTX3_hGUAxOpKf_HOigCg6HjBmVz2qYH2Jey0g8RNPmV-lHH0ksCI7hoDoqyWaDwqJ4r3gAMrMJBGYh6cTo7FaKTg==": {
+    "debora": {
         "senha": "$2b$12$EAA7mNb8EB7QVsMob8rPGeP5Gk9ABlvuPVr402BOCA2fKriwCPba6",
-        "ativacao": "gAAAAABoaDTXdCEza3tJsZSw1SJsOu-_jVhoVTfTud_1cvNjL3FzGUI5R2keRiDtBaABvK3Q8uFhHOht2UpxvBHzXaZNoOEgz1wqpOSD1RM9wxpImYquo54=",
-        "expiracao": "gAAAAABoaDTX0EZMoox11YLGSehRgEdLlPvB73IEXw8ljHZCrW0zwebdhTGeqLuuOhNbmJ5zQ5K_b0R1vxDKqE60B56k65g1riGT1lcvo-F5v7Jcu6tlBf8=",
-        "email": "gAAAAABoaDTX15q_uNVxO8qEdj7Yqyv0aKdyrxEJ2VUJ6fk7rnxplyACphqHHh708FtT0L_Ekvt4JHMef7Vut12xtVWqbFI7Dx-NuVsBT1AZlsNHXTsj8fo=",
-        "email_enviado": "gAAAAABoaDTXr59md3Q9lRrpyw_aeMx4bnmh_d8WHSThm--e94Eo0UfAfNTTr2We25Zje2ymJ9e492KGLdUff9MC15bQ9hMD7A==",
-        "notificar_cliente": "gAAAAABoaDTXxoEkuetasID5bGwv0zK5PO4b5KIdzhHgChnwLcE1ZjQXsloq50vcrY8u_OTCFkT8HRBCn3Yo-ttt02O8dCaxFw=="
+        "ativacao": "2025-07-04 15:35:55",
+        "expiracao": "2025-07-05 15:35:55",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": true
+    },
+    "etecicero": {
+        "senha": "$2b$12$N0JcTEf1hPT7vqEF19.2nuRTtj241Ja5Tom8WJM9D6A6z.4xPBC9e",
+        "ativacao": "2025-07-04 18:11:28",
+        "expiracao": "2025-07-10 18:11:28",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": true
     }
 }

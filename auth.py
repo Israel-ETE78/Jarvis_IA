@@ -1,32 +1,31 @@
 import streamlit as st
-import json # Não é mais necessário para carregar/salvar assinaturas diretamente
+import json # Agora é necessário novamente para carregar o JSON diretamente
 import bcrypt
 import os
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Importa as funções do seu novo módulo assinaturas_manager.py
-from assinaturas_manager import carregar_assinaturas, adicionar_assinatura, remover_assinatura # Importe o que você precisar
+# Não há mais importação de assinaturas_manager.py aqui!
+# from assinaturas_manager import carregar_assinaturas, adicionar_assinatura, remover_assinatura 
 
 # Carrega as variáveis do arquivo .env para este módulo
 load_dotenv()
 
-# --- Funções Auxiliares (A FUNÇÃO carregar_assinaturas() ABAIXO SERÁ REMOVIDA) ---
-# A função carregar_assinaturas() que lia diretamente o JSON será substituída
-# pela que vem de assinaturas_manager.py.
-# Esta função local não é mais necessária:
-# def carregar_assinaturas():
-#     """Carrega os dados de assinaturas do arquivo JSON."""
-#     caminho_arquivo = "dados/assinaturas.json"
-#     if os.path.exists(caminho_arquivo):
-#         with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-#             try:
-#                 data = json.load(f)
-#                 return data if isinstance(data, dict) else {}
-#             except json.JSONDecodeError:
-#                 return {}
-#     return {}
-
+# --- Funções Auxiliares (AGORA carregar_assinaturas() É RECOLOCADA AQUI) ---
+def carregar_assinaturas():
+    """Carrega os dados de assinaturas do arquivo JSON em texto claro."""
+    caminho_arquivo = "dados/assinaturas.json"
+    if os.path.exists(caminho_arquivo):
+        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
+            except json.JSONDecodeError:
+                # Se o arquivo não for um JSON válido (ex: criptografado acidentalmente)
+                print(f"ERRO: O arquivo '{caminho_arquivo}' não é um JSON válido. Retornando vazio.")
+                return {}
+    print(f"AVISO: Arquivo '{caminho_arquivo}' não encontrado. Retornando assinaturas vazias.")
+    return {}
 
 # --- Lógica Principal de Autenticação ---
 def check_password():
@@ -54,29 +53,20 @@ def check_password():
                 return True
             
             # --- LÓGICA PARA USUÁRIOS NORMAIS (ASSINANTES) ---
-            # AGORA USAMOS A FUNÇÃO carregar_assinaturas() DO assinaturas_manager.py
-            # Essa função já lida com a descriptografia das chaves de usuário (nomes de usuário)
-            # e, se configurado, dos valores internos.
-            assinaturas = carregar_assinaturas() 
+            assinaturas = carregar_assinaturas() # Agora usa a função local neste auth.py
             
-            # O 'username' digitado pelo usuário deve corresponder a uma chave NOVO_FORMATO_TEXTO_CLARO
-            # no dicionário retornado por carregar_assinaturas()
             user_data = assinaturas.get(username)
 
             if user_data:
-                # O campo 'senha' no user_data já estará no formato hash (bcrypt)
-                # pois não foi criptografado com Fernet.
                 hash_salvo = user_data.get('senha', '').encode('utf-8')
                 senha_digitada_bytes = password.encode('utf-8')
                 
                 if bcrypt.checkpw(senha_digitada_bytes, hash_salvo):
                     try:
-                        # Certifique-se de que 'expiracao' é uma string no formato correto
-                        # e que não foi criptografada, ou que _decrypt_signature_value a converteu de volta para string
                         expiracao = datetime.strptime(user_data['expiracao'], "%Y-%m-%d %H:%M:%S")
                     except (KeyError, ValueError) as e:
-                        st.error(f"Erro no formato de expiração do usuário. Contacte o suporte. Erro: {e}")
-                        print(f"DEBUG: user_data['expiracao'] = {user_data.get('expiracao')}")
+                        st.error(f"Erro no formato da data de expiração do usuário. Contacte o suporte técnico. (Detalhes: {e})")
+                        print(f"DEBUG: user_data['expiracao'] = {user_data.get('expiracao')}, Tipo: {type(user_data.get('expiracao'))}")
                         return False
 
                     if datetime.now() < expiracao:
@@ -88,8 +78,11 @@ def check_password():
                     else:
                         st.error("❌ Sua assinatura expirou.")
                         return False
-            
-            st.error("Usuário ou senha inválidos.")
-            return False
+                else: # Senha incorreta
+                    st.error("Usuário ou senha inválidos.")
+                    return False
+            else: # Usuário não encontrado
+                st.error("Usuário ou senha inválidos.")
+                return False
             
     return False
