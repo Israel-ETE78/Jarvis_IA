@@ -1110,7 +1110,6 @@ if "chats" not in st.session_state:
 chat_id = st.session_state.current_chat_id
 active_chat = st.session_state.chats[chat_id]
 
-
 import base64
 
 def img_to_base64(path):
@@ -1118,22 +1117,13 @@ def img_to_base64(path):
         data = f.read()
     return base64.b64encode(data).decode()
 
-img_b64 = img_to_base64("assets/inco2.png")
-
-import base64
-
-def img_to_base64(path):
-    with open(path, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-img_b64 = img_to_base64("assets/inco2.png")
+gif_b64 = img_to_base64("assets/jarvis-gif.gif")  # <-- substitui a imagem
 
 with st.sidebar:
     st.markdown(
         f"""
         <div style="text-align: center;">
-            <img src="data:image/png;base64,{img_b64}" width="150" style="display: inline-block;" />
+            <img src="data:image/gif;base64,{gif_b64}" width="150" style="display: inline-block;" />
             <h1 style="font-size: 28px; font-weight: bold; color: #00f0ff; margin-top: 10px;">
                 🤖 Jarvis IA
             </h1>
@@ -1141,11 +1131,6 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-
-
-
-
-
 
     
     # --- CONSTRUÇÃO MANUAL DA NAVEGAÇÃO ---
