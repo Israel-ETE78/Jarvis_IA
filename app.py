@@ -1183,10 +1183,17 @@ with st.sidebar:
                     st.write(f"Tem certeza que deseja excluir '{chat_data['title']}'?")
                     if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
                         delete_chat(id)
+
+        # Botão "Sair" 
+        if st.button("🚪 Sair", use_container_width=True, type="secondary"):
+            # Limpar o estado da sessão para deslogar
+            st.session_state.clear()
+            # Redirecionar para a página
+            st.rerun()   
     st.divider()
 
 if st.session_state.get("show_feedback_form", False) and st.session_state.get("username") != ADMIN_USERNAME:
-    with st.expander("⭐ Deixe seu Feedback", expanded=True):
+    with st.expander("⭐ Deixe seu Feedback", expanded=False):
         st.write("Sua opinião é importante para a evolução do Jarvis!")
         
         with st.form("sidebar_feedback_form", clear_on_submit=True):
