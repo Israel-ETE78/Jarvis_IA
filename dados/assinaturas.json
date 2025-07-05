@@ -15,14 +15,6 @@
         "email_enviado": false,
         "notificar_cliente": false
     },
-    "debora": {
-        "senha": "$2b$12$EAA7mNb8EB7QVsMob8rPGeP5Gk9ABlvuPVr402BOCA2fKriwCPba6",
-        "ativacao": "2025-07-04 15:35:55",
-        "expiracao": "2025-07-05 15:35:55",
-        "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
-        "notificar_cliente": true
-    },
     "etecicero": {
         "senha": "$2b$12$N0JcTEf1hPT7vqEF19.2nuRTtj241Ja5Tom8WJM9D6A6z.4xPBC9e",
         "ativacao": "2025-07-04 18:11:28",
@@ -30,5 +22,85 @@
         "email": "israelnetmax@gmail.com",
         "email_enviado": false,
         "notificar_cliente": true
+    },
+    "jarvis01": {
+        "senha": "$2b$12$NBNNKF53qIImLlmHC/PnfuM0hmuDEDiToe5b06yAPCmwfvbNSFcGy",
+        "ativacao": "2025-07-05 00:11:26",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis02": {
+        "senha": "$2b$12$vGNa6cpXRN4MFTWr/EE5Jurc7DjleYRyMxiDQKJ.vEWArvAIC2lYq",
+        "ativacao": "2025-07-05 00:12:14",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis03": {
+        "senha": "$2b$12$aAsK/PnLpDSW0h7kMt.FgOogNDzO.1/snxtAqsyhhYLa9jvfFbS0u",
+        "ativacao": "2025-07-05 00:12:39",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "arvis04": {
+        "senha": "$2b$12$rEXDhL9nDcjQ4A6vHMkta.iTJnNOuo9Se227fXqxFH78BcHBJp6Ju",
+        "ativacao": "2025-07-05 00:13:00",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis05": {
+        "senha": "$2b$12$MkByMvrdH.zKjgQhRUjrneuS2HwB.s9UB.gCLmWtQ3.yYeivKgcRa",
+        "ativacao": "2025-07-05 00:13:47",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis06": {
+        "senha": "$2b$12$HwSPlKLnrow3s7FEzNybgO3/vW7W6HPERj2uwy9y1frW6bqk0CN5a",
+        "ativacao": "2025-07-05 00:14:07",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis07": {
+        "senha": "$2b$12$2i9z72sFLLNk7dQjt7Oo7.z6CnBXmWNqFhHmB4WKD2eQQIQKPOOTS",
+        "ativacao": "2025-07-05 00:14:27",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis08": {
+        "senha": "$2b$12$bHuJmyY8a8QQfQM/K9pSre5vx8tkIYHXFbIDSGUDNmZzvO/2j1Q.W",
+        "ativacao": "2025-07-05 00:14:46",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis09": {
+        "senha": "$2b$12$SEc7JZyW4akrNykcB00bNuffhT8F9rSabK9g1WrwMFmTlp/qMwszW",
+        "ativacao": "2025-07-05 00:15:05",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
+    },
+    "jarvis10": {
+        "senha": "$2b$12$409n54PFpYbH1PeQkSmfKe4.lfVTXfpePhoNehjXZXuRTUKxhRMGO",
+        "ativacao": "2025-07-05 00:17:56",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false
     }
 }
