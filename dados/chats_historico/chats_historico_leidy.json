@@ -1,0 +1,33 @@
+{
+    "20250704_213841_143418": {
+        "title": "Saudação e oferta de ajuda",
+        "messages": [
+            {
+                "role": "user",
+                "type": "text",
+                "content": "oi"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Oi, tudo bem com você? Como posso lhe ajudar hoje.",
+                "origem": "local"
+            },
+            {
+                "role": "user",
+                "type": "text",
+                "content": "tudo bom"
+            },
+            {
+                "role": "assistant",
+                "type": "text",
+                "content": "Ótimo! Se precisar de algo, é só falar. 😊 Curte ler algo novo esses dias?",
+                "origem": "openai"
+            }
+        ],
+        "contexto_arquivo": null,
+        "processed_file_name": null,
+        "resumo_curto_prazo": "",
+        "ultima_mensagem_falada": null
+    }
+}

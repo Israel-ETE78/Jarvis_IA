@@ -1,17 +1,17 @@
 {
-    "20250704_171506_839085": {
-        "title": "Futebol e posição favorita",
+    "20250704_213009_271998": {
+        "title": "Capital de Pernambuco",
         "messages": [
             {
                 "role": "user",
                 "type": "text",
-                "content": "o que gosto de jogar?"
+                "content": "qual a capital de pernambuco"
             },
             {
                 "role": "assistant",
                 "type": "text",
-                "content": "Você gosta de jogar bola! Isso é uma ótima maneira de se manter ativo e se divertir. Qual é a sua posição favorita em campo?",
-                "origem": "openai"
+                "content": "A capital de Pernambuco é Recife.",
+                "origem": "local"
             }
         ],
         "contexto_arquivo": null,
