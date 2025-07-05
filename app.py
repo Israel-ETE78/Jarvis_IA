@@ -1163,14 +1163,23 @@ with st.sidebar:
         help="Escolha o idioma para o Jarvis falar suas respostas."
     )
 
+with st.sidebar:
     st.write("#### Histórico de Chats")
+
     if "chats" in st.session_state:
         for id, chat_data in reversed(list(st.session_state.chats.items())):
-            col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
+            chat_selected = (id == st.session_state.current_chat_id)
+            col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
+
+            # Botão para selecionar o chat
             with col1:
-                if st.button(chat_data["title"], key=f"chat_{id}", use_container_width=True, type="secondary" if id != st.session_state.current_chat_id else "primary"):
+                if st.button(chat_data["title"], key=f"chat_{id}",
+                             use_container_width=True,
+                             type="primary" if chat_selected else "secondary"):
                     switch_chat(id)
                     st.rerun()
+
+            # Botão para editar título
             with col2:
                 with st.popover("✏️", use_container_width=True):
                     new_title = st.text_input("Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
@@ -1178,11 +1187,15 @@ with st.sidebar:
                         st.session_state.chats[id]["title"] = new_title
                         salvar_chats(st.session_state["username"])
                         st.rerun()
+
+            # Botão para excluir
             with col3:
                 with st.popover("🗑️", use_container_width=True):
-                    st.write(f"Tem certeza que deseja excluir '{chat_data['title']}'?")
+                    st.write(f"Tem certeza que deseja excluir **{chat_data['title']}**?")
                     if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
                         delete_chat(id)
+                        st.rerun()
+
 
         # Botão "Sair" 
         if st.button("🚪 Sair", use_container_width=True, type="secondary"):
