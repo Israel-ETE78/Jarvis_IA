@@ -1111,16 +1111,44 @@ chat_id = st.session_state.current_chat_id
 active_chat = st.session_state.chats[chat_id]
 
 
-with st.sidebar:
-    st.write("### 🤖 Jarvis IA")
+import base64
 
- # <<< ADICIONE ESTA LINHA PARA EXIBIR A IMAGEM >>>
-# Define a largura da imagem em pixels
-    st.image("assets/inco2.png", width=150) 
+def img_to_base64(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+img_b64 = img_to_base64("assets/inco2.png")
+
+import base64
+
+def img_to_base64(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+img_b64 = img_to_base64("assets/inco2.png")
+
+with st.sidebar:
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{img_b64}" width="150" style="display: inline-block;" />
+            <h1 style="font-size: 28px; font-weight: bold; color: #00f0ff; margin-top: 10px;">
+                🤖 Jarvis IA
+            </h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+
+
+
+
     
     # --- CONSTRUÇÃO MANUAL DA NAVEGAÇÃO ---
-    st.sidebar.title("Navegação")
-    st.sidebar.page_link("app.py", label="Chat Principal", icon="🤖")
     
     st.sidebar.divider()
     st.sidebar.header("Painel do Usuário")
