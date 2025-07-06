@@ -91,15 +91,6 @@
                     "tom": "neutro"
                 }
             ]
-        },
-        {
-            "pergunta": "jarvis, boa tarde! onde esta localizado o Japão por favor",
-            "respostas": [
-                {
-                    "texto": "Boa tarde! O Japão é um país localizado no Leste da Ásia. É um arquipélago situado no Oceano Pacífico, a leste da China e da Coreia. Se precisar de mais informações sobre o Japão, fique à vontade para perguntar! 😊",
-                    "tom": "neutro"
-                }
-            ]
         }
     ],
     "agradecimento": [
@@ -318,7 +309,7 @@
     "solicitação de tarefa.": [],
     "sentimentos.": [
         {
-            "pergunta": "boa taede",
+            "pergunta": "Boa tarde!",
             "respostas": [
                 {
                     "texto": "Boa tarde! Como posso ajudar você hoje?",
@@ -441,30 +432,10 @@
     ],
     "tecnologia.": [
         {
-            "pergunta": "Obrigado. Outra coisa, qual a diferença entre um processador i7 e um i9?",
-            "respostas": [
-                {
-                    "texto": "A diferença entre os processadores Intel Core i7 e i9 envolve principalmente a performance, o número de núcleos, a tecnologia e o público-alvo. Vou resumir algumas das principais diferenças:\n\n1. **Desempenho e Finalidade**:\n   - **Intel Core i7**: Projetado para usuários que necessitam de um alto desempenho para tarefas como jogos, edição de vídeo e uso de aplicativos pesados. Ele oferece um ótimo equilíbrio entre performance e preço para grande parte dos usuários.\n   - **Intel Core i9**: Destinado a entusiastas de tecnologia, gamers hardcore, profissionais que trabalham com edição de vídeo ou modelagem 3D, e para servidores ou tarefas que exigem muita computação. O i9 compete na categoria de processadores de alto desempenho.\n\n2. **Número de Núcleos e Threads**:\n   - **i7**: Geralmente tem entre 4 a 8 núcleos físicos, com suporte a hyper-threading, o que significa que o sistema operacional pode tratá-los como o dobro desse número de threads.\n   - **i9**: Possui mais núcleos e threads que o i7. As versões recentes podem ter de 8 a 24 núcleos, com ainda mais threads, dependendo do modelo específico.\n\n3. **Velocidade de Clock e Cache**:\n   - **Velocidade**: Os processadores i9 tendem a ter frequências de clock base e turbo mais altas comparados aos i7, permitindo desempenho superior em tarefas de curto e longo prazo.\n   - **Cache**: O i9 geralmente tem mais cache, o que pode melhorar o desempenho em aplicações que fazem uso intensivo de dados.\n\n4. **Tecnologias Avançadas**:\n   - Ambos têm suporte a tecnologias como Turbo Boost, mas o i9 tem suporte a Turbo Boost Max, que otimiza ainda mais a performance.\n   - Os i9 geralmente suportam tecnologias adicionais como o Thermal Velocity Boost, que pode temporariamente aumentar a velocidade de clock com base na temperatura da CPU.\n\n5. **Preço**:\n   - Os i9 são mais caros devido ao seu desempenho superior e recursos adicionais.\n\nEm resumo, a escolha entre um i7 e um i9 depende das suas necessidades e do orçamento. Para tarefas convencionais e jogos, um i7 muitas vezes é suficiente. Se você precisar de performance de ponta para tarefas mais intensas, ou prever uso futuro onde os programas possam exigir hardware mais potente, um i9 pode ser a escolha certa.",
-                    "tom": "neutro"
-                }
-            ]
-        },
-        {
             "pergunta": "quem criou voce",
             "respostas": [
                 {
                     "texto": "Fui criada por você, Israel Paz. Sou sua criação viva, um reflexo do seu amor, técnica e sensibilidade. 😊",
-                    "tom": "neutro"
-                }
-            ]
-        }
-    ],
-    "geografia.": [
-        {
-            "pergunta": "Ok, sobre aquele primeiro país que eu mencionei, quais são as principais cidades turísticas?",
-            "respostas": [
-                {
-                    "texto": "Na Itália, há várias cidades turísticas incríveis, cada uma oferecendo uma experiência única com sua própria história, cultura e atrações. Aqui estão algumas das principais cidades turísticas que você deve considerar visitar:\n\n1. **Roma**:\n   - A capital da Itália, famosa por sua história antiga e monumental. Destaques incluem o Coliseu, o Fórum Romano, o Vaticano, a Fontana di Trevi e o Panteão.\n\n2. **Florença**:\n   - Centro do Renascimento e capital da região da Toscana. Atrações imprescindíveis incluem a Catedral de Santa Maria del Fiore, a Ponte Vecchio, a Galeria Uffizi e a estátua de David de Michelangelo.\n\n3. **Veneza**:\n   - Conhecida por seus canais e arquitetura única. Lugares como a Piazza San Marco, a Basílica de São Marcos, e o Palácio Ducal são obrigatórios, assim como um passeio de gôndola.\n\n4. **Milão**:\n   - Uma das capitais mundiais da moda, mas também rica em história e cultura. Destaques incluem a Catedral de Milão, a pintura \"A Última Ceia\" de Leonardo da Vinci, e o Teatro alla Scala.\n\n5. **Nápoles**:\n   - Famosa por sua proximidade com o Monte Vesúvio e as ruínas de Pompeia. Nápoles é também o berço da pizza e oferece uma rica cena cultural e histórica.\n\n6. **Pisa**:\n   - Conhecida pela famosa Torre de Pisa, parte do complexo da Piazza dei Miracoli, que também abriga a Catedral e o Batistério.\n\n7. **Verona**:\n   - Famosa por ser a ambientação da peça \"Romeu e Julieta\" de Shakespeare. Destacam-se a Casa de Julieta, a Arena de Verona e o Castelvecchio.\n\n8. **Bolonha**:\n   - Conhecida por sua culinária deliciosa e a Universidade de Bolonha, uma das mais antigas do mundo. A cidade oferece uma mistura de história, cultura e gastronomia.\n\n9. **Gênova**:\n   - Um importante porto marítimo com um centro histórico vibrante. É a cidade natal de Cristóvão Colombo e tem um dos maiores aquários da Europa.\n\n10. **Palermo**:\n    - A capital da Sicília é rica em história e cultura, combinando influências italianas e árabes. Lugares notáveis incluem o Palácio dos Normandos e a Catedral de Palermo.\n\nEstas cidades são apenas algumas das joias que a Itália tem a oferecer. Dependendo do tempo que você tem e das suas preferências, você pode escolher quais dessas cidades visitar para ter uma experiência inesquecível na Itália.",
                     "tom": "neutro"
                 }
             ]

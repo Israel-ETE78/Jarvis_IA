@@ -159,12 +159,13 @@ def limpar_pdf_da_memoria():
 def gerar_conteudo_para_pdf(topico):
     """Usa a IA para gerar um texto bem formatado sobre um tópico para o PDF."""
     prompt = f"Por favor, escreva um texto detalhado e bem estruturado sobre o seguinte tópico para ser incluído em um documento PDF. Organize com parágrafos claros e, se apropriado, use listas. Tópico: '{topico}'"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_modelo = modelo.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=2048
-    )
+    model=modelo_selecionado,
+    messages=[{"role": "user", "content": prompt}],
+    temperature=0.7,
+    max_tokens=2048
+)
     return resposta_modelo.choices[0].message.content
 
 
@@ -324,15 +325,17 @@ def gerar_imagem_com_dalle(prompt_para_imagem):
 
 def classificar_categoria(pergunta):
     prompt = f"Classifique esta pergunta em uma única categoria simples (como geografia, história, sentimentos, programação, etc):\nPergunta: {pergunta}"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta = modelo.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}])
+    model=modelo_selecionado, messages=[{"role": "user", "content": prompt}])
     return resposta.choices[0].message.content.strip().lower()
 
 
 def detectar_tom_emocional(resposta):
     prompt = f"Qual o tom emocional desta resposta? Use uma só palavra: neutro, feliz, triste, sensível, etc.\nResposta: {resposta}"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_api = modelo.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}])
+    model=modelo_selecionado, messages=[{"role": "user", "content": prompt}])
     return resposta_api.choices[0].message.content.strip().lower()
 
 def detectar_tom_usuario(pergunta_usuario):
@@ -344,8 +347,9 @@ def detectar_tom_usuario(pergunta_usuario):
     Texto do usuário: "{pergunta_usuario}"
     """
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=20
@@ -364,8 +368,9 @@ def detectar_idioma_com_ia(texto_usuario):
     try:
         prompt = f"Qual o código de idioma ISO 639-1 (ex: 'en', 'pt', 'es') do seguinte texto? Responda APENAS com o código de duas letras.\n\nTexto: \"{texto_usuario}\""
         
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=5, # Super curto e rápido
             temperature=0
@@ -461,8 +466,9 @@ def processar_comando_lembrese(texto_do_comando):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             response_format={"type": "json_object"}
@@ -640,11 +646,12 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     mensagens_para_api.extend(historico_chat)
 
     # Chamada final para a OpenAI
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_modelo = chamar_openai_com_retries(
-       modelo_openai=modelo,
-       mensagens=mensagens_para_api,
-       modelo="gpt-4o"
-   )
+        modelo_openai=modelo,
+        mensagens=mensagens_para_api,
+        modelo=modelo_selecionado
+    )
     
     if resposta_modelo is None:
        return {
@@ -839,8 +846,9 @@ def gerar_resumo_curto_prazo(historico_chat):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=100
@@ -870,8 +878,9 @@ def gerar_titulo_conversa_com_ia(mensagens):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=15,
             temperature=0.2
@@ -910,8 +919,9 @@ def precisa_buscar_na_web(pergunta_usuario):
     Pergunta do usuário: "{pergunta_usuario}"
     """
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=10
@@ -1009,8 +1019,9 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
 """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo_codigo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt_gerador_codigo}],
             temperature=0,
         )
@@ -1062,8 +1073,9 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
         - No final, sugira 2 ou 3 perguntas inteligentes que o usuário poderia fazer para aprofundar a análise.
         """
         
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo_interpretacao = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt_interpretador}],
             temperature=0.4,
         )
@@ -1172,6 +1184,14 @@ with st.sidebar:
         st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
         st.sidebar.page_link("pages/5_Gerenciamento_de_Assinaturas.py", label="Gerenciar Assinaturas", icon="🔑")
         st.sidebar.page_link("pages/6_Visualizar_Feedback.py", label="Visualizar Feedback", icon="📊")
+    
+    # --- Seletor de Modelo (Apenas Admin) ---
+        st.sidebar.radio(
+            "Alternar Modelo OpenAI (Sessão Atual):",
+            options=['gpt-4o', 'gpt-3.5-turbo'],
+            key='admin_model_choice',
+            help="Esta opção afeta apenas a sua sessão de administrador e reseta ao sair. O padrão para todos os outros usuários é sempre gpt-4o."
+        )
     
     # --- RESTO DA SIDEBAR (VISÍVEL PARA TODOS) ---
     st.sidebar.divider()
@@ -1472,9 +1492,10 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
                 
                 prompt_interpretador = f"""Você é Jarvis, um analista de dados sênior. O usuário pediu um Raio-X completo do dataset. Abaixo estão os resultados brutos. Sua tarefa é criar um relatório claro e com insights, explicando cada seção (resumo estatístico, categorias, valores únicos, dados faltantes e correlações) para o usuário.\n\n--- DADOS BRUTOS ---\n{resultados_brutos}\n--- FIM DOS DADOS BRUTOS ---"""
                 
+                modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
                 resposta_interpretada = modelo.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt_interpretador}]
+                model=modelo_selecionado,
+                messages=[{"role": "user", "content": prompt_interpretador}]
                 ).choices[0].message.content
 
                 active_chat["messages"].append({"role": "assistant", "type": "text", "content": resposta_interpretada})
