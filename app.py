@@ -32,7 +32,8 @@ from fpdf.enums import XPos, YPos
 from openai import RateLimitError
 import time
 from supabase import create_client, Client
-
+from pathlib import Path
+from utils import encrypt_file_content_general, decrypt_file_content_general
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
 # ==============================================================================
@@ -485,51 +486,74 @@ def processar_comando_lembrese(texto_do_comando):
     except Exception as e:
         st.error(f"Ocorreu um erro ao tentar memorizar a preferência: {e}")
 
-def carregar_chats(username):
-    """Carrega os chats de um arquivo JSON específico do usuário."""
-    if not username:
+def carregar_chats(username): #
+    """Carrega os chats de um arquivo JSON específico do usuário, descriptografando o conteúdo.""" #
+    if not username: #
         return {} # Retorna um dicionário vazio se não houver nome de usuário
 
-    filename = f"chats_historico_{username}.json"
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {} # Se o arquivo do usuário não existir, retorna um histórico vazio.
+    filename = f"dados/chats_historico_{username}.json" # Garanta que o caminho 'dados/' existe
 
-def salvar_chats(username):
+    if os.path.exists(filename): #
+        try: #
+            with open(filename, "r", encoding="utf-8") as f: #
+                encrypted_file_content = f.read() #
+
+            decrypted_file_content = decrypt_file_content_general(encrypted_file_content) # Descriptografa o conteúdo
+
+            return json.loads(decrypted_file_content) # Tenta carregar o JSON descriptografado
+        except json.JSONDecodeError: #
+            print(f"AVISO: Conteúdo do arquivo de chat '{filename}' não é JSON válido após descriptografia. Tentando como JSON bruto.") #
+            # Tenta carregar como JSON bruto (caso o arquivo não estivesse criptografado antes)
+            try: #
+                with open(filename, "r", encoding="utf-8") as f: #
+                    return json.load(f) #
+            except json.JSONDecodeError: #
+                print(f"ERRO FATAL: Conteúdo do arquivo de chat '{filename}' não é JSON válido (criptografado ou não). Retornando vazio.") #
+                return {} #
+        except Exception as e: #
+            print(f"Erro ao carregar ou descriptografar chats para '{username}': {e}") #
+            return {} #
+    return {} #
+
+def salvar_chats(username): #
     """
     Salva os chats do usuário, ignorando objetos não-serializáveis como 
     DataFrames (no nível do chat) e Figuras Plotly (no nível das mensagens).
+    Agora criptografa o conteúdo do arquivo.
     """
-    if not username or "chats" not in st.session_state:
-        return
+    if not username or "chats" not in st.session_state: #
+        return #
 
     # 1. Cria uma cópia exata e segura do histórico de chats
-    chats_para_salvar = copy.deepcopy(st.session_state.chats)
+    chats_para_salvar = copy.deepcopy(st.session_state.chats) #
 
     # 2. Itera sobre cada chat na CÓPIA
-    for chat_id, chat_data in chats_para_salvar.items():
-        
+    for chat_id, chat_data in chats_para_salvar.items(): #
         # 2a. Remove o DataFrame do nível do chat, se existir
-        if "dataframe" in chat_data:
-            del chat_data["dataframe"]
+        if "dataframe" in chat_data: #
+            del chat_data["dataframe"] #
 
-        # 2b. (NOVA LÓGICA) Filtra a lista de mensagens para remover as que não são serializáveis
-        if "messages" in chat_data:
-            mensagens_serializaveis = []
-            for msg in chat_data["messages"]:
-                # Adiciona a mensagem à nova lista apenas se o tipo NÃO for 'plot'
-                if msg.get("type") != "plot":
-                    mensagens_serializaveis.append(msg)
-            
-            # Substitui a lista de mensagens antiga pela nova, já filtrada
-            chat_data["messages"] = mensagens_serializaveis
+        # 2b. Filtra a lista de mensagens para remover as que não são serializáveis (type 'plot')
+        if "messages" in chat_data: #
+            mensagens_serializaveis = [] #
+            for msg in chat_data["messages"]: #
+                if msg.get("type") != "plot": # Adiciona a mensagem à nova lista apenas se o tipo NÃO for 'plot'
+                    mensagens_serializaveis.append(msg) #
+            chat_data["messages"] = mensagens_serializaveis # Substitui a lista de mensagens antiga pela nova, já filtrada
 
-    # 3. Salva a cópia totalmente limpa no arquivo JSON
-    filename = f"chats_historico_{username}.json"
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(chats_para_salvar, f, ensure_ascii=False, indent=4)
+    # 3. Salva a cópia totalmente limpa no arquivo JSON (agora criptografado)
+    filename = f"dados/chats_historico_{username}.json" # Garanta que o caminho 'dados/' existe
+
+    data_json_string = json.dumps(chats_para_salvar, ensure_ascii=False, indent=4) #
+    encrypted_data_string = encrypt_file_content_general(data_json_string) # Criptografa a string JSON
+
+    try:
+        Path(filename).parent.mkdir(parents=True, exist_ok=True) # Cria o diretório 'dados' se não existir
+        with open(filename, "w", encoding="utf-8") as f: #
+            f.write(encrypted_data_string) # Escreve a STRING CRIPTOGRAFADA
+        print(f"Chats de '{username}' salvos localmente (criptografados).") #
+    except Exception as e: #
+        print(f"Erro ao salvar chats localmente: {e}") #
 
 
 def escolher_resposta_por_contexto(entry):

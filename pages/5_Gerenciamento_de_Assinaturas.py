@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import pandas as pd
 import bcrypt
+from auth import carregar_assinaturas, salvar_assinaturas
 
 # Carregar .env local se estiver rodando localmente
 load_dotenv()
@@ -110,13 +111,14 @@ with st.form("form_nova_assinatura", clear_on_submit=True):
                 hash_da_senha = bcrypt.hashpw(senha_bytes, bcrypt.gensalt())
                 
                 assinaturas[novo_usuario] = {
-                    "senha": hash_da_senha.decode('utf-8'),
-                    "ativacao": ativacao_str,
-                    "expiracao": expiracao_str,
-                    "email": novo_email,
-                    "email_enviado": False,
-                    "notificar_cliente": notificar_cliente_novo if not sem_limite else False
-                }
+    "senha": hash_da_senha.decode('utf-8'),
+    "ativacao": ativacao_str,
+    "expiracao": expiracao_str,
+    "email": novo_email,
+    "email_enviado": False,
+    "notificar_cliente": notificar_cliente_novo if not sem_limite else False,
+    "primeiro_login": True, 
+}
                 salvar_assinaturas(assinaturas)
                 st.success(f"✅ Assinatura para '{novo_usuario}' adicionada.")
                 st.rerun()
@@ -129,81 +131,124 @@ st.divider()
 st.subheader("📄 Assinaturas Atuais")
 agora = datetime.now()
 
-for user, dados in list(assinaturas.items()):
-    expiracao = datetime.strptime(dados['expiracao'], "%Y-%m-%d %H:%M:%S")
-    
-    with st.container(border=True):
-        st.markdown(f"#### 👤 `{user}`")
-        
-        # --- Seção de Edição (Usa um popover para não poluir a tela) ---
-        with st.popover(f"📝 Editar {user}", use_container_width=True):
-            with st.form(f"form_editar_{user}"):
-                st.write(f"Editando dados de **{user}**")
-                
-                # Para edição de senha, o campo começa vazio por segurança
-                nova_senha_ed = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", key=f"senha_ed_{user}")
-                novo_email_ed = st.text_input("Novo E-mail", value=dados['email'], key=f"email_ed_{user}")
-                notificar_cliente_ed = st.checkbox("Notificar cliente?", value=dados.get("notificar_cliente", True), key=f"notificar_ed_{user}")
+if assinaturas:
+    for user, dados in list(assinaturas.items()):
+        expiracao = datetime.strptime(dados['expiracao'], "%Y-%m-%d %H:%M:%S")
 
-                if st.form_submit_button("Salvar Alterações"):
-                    # Atualiza a senha apenas se uma nova foi digitada
-                    if nova_senha_ed:
-                        senha_bytes_ed = nova_senha_ed.encode('utf-8')
-                        hash_senha_ed = bcrypt.hashpw(senha_bytes_ed, bcrypt.gensalt())
-                        assinaturas[user]['senha'] = hash_senha_ed.decode('utf-8')
-                        st.success("Senha atualizada com sucesso!")
+        with st.container(border=True):
+            st.markdown(f"#### 👤 `{user}`")
 
-                    # Atualiza os outros campos
-                    assinaturas[user]['email'] = novo_email_ed
-                    assinaturas[user]['notificar_cliente'] = notificar_cliente_ed
-                    
+            # --- Seção de Edição (Usa um popover para não poluir a tela) ---
+            with st.popover(f"📝 Editar {user}", use_container_width=True):
+                with st.form(f"form_editar_{user}"):
+                    st.write(f"Editando dados de **{user}**")
+
+                    nova_senha_ed = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", key=f"senha_ed_{user}")
+                    novo_email_ed = st.text_input("Novo E-mail", value=dados['email'], key=f"email_ed_{user}")
+                    notificar_cliente_ed = st.checkbox("Notificar cliente?", value=dados.get("notificar_cliente", True), key=f"notificar_ed_{user}")
+
+                    if st.form_submit_button("Salvar Alterações"):
+                        if nova_senha_ed:
+                            senha_bytes_ed = nova_senha_ed.encode('utf-8')
+                            hash_senha_ed = bcrypt.hashpw(senha_bytes_ed, bcrypt.gensalt())
+                            assinaturas[user]['senha'] = hash_senha_ed.decode('utf-8')
+                            # Se a senha for editada manualmente pelo admin, assume-se que não é o primeiro login.
+                            assinaturas[user]['primeiro_login'] = False 
+                            st.success("Senha atualizada com sucesso!")
+
+                        assinaturas[user]['email'] = novo_email_ed
+                        assinaturas[user]['notificar_cliente'] = notificar_cliente_ed
+
+                        salvar_assinaturas(assinaturas)
+                        st.success("Alterações salvas.")
+                        st.rerun()
+
+            # --- Seção de Informações ---
+            st.text(f"E-mail: {dados['email']}")
+            st.text(f"Expira em: {dados['expiracao']}")
+            notificacao_status = "Ativada" if dados.get("notificar_cliente", True) else "Desativada"
+            st.text(f"Notificação para cliente: {notificacao_status}")
+            st.text(f"Status Primeiro Login: {'Sim' if dados.get('primeiro_login', False) else 'Não'}")
+
+
+            # --- Botões de Ação Rápida ---
+            col1, col2, col3 = st.columns(3) # Aumente para 3 colunas
+            with col1:
+                if st.button(f"🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
+                    data_base = expiracao if expiracao > agora else agora
+                    nova_data = data_base + timedelta(days=30)
+                    assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S")
+                    assinaturas[user]['email_enviado'] = False # Permite nova notificação
                     salvar_assinaturas(assinaturas)
-                    st.success("Alterações salvas.")
+                    st.success(f"Assinatura de '{user}' renovada.")
                     st.rerun()
 
-        # --- Seção de Informações ---
-        st.text(f"E-mail: {dados['email']}")
-        st.text(f"Expira em: {dados['expiracao']}")
-        notificacao_status = "Ativada" if dados.get("notificar_cliente", True) else "Desativada"
-        st.text(f"Notificação para cliente: {notificacao_status}")
+            with col2:
+                # NOVO BOTÃO: Resetar Senha / Forçar Nova Senha
+                if st.button(f"🔑 Forçar Nova Senha", key=f"forcar_senha_{user}", use_container_width=True):
+                    assinaturas[user]['primeiro_login'] = True # Marca para forçar alteração
+                    salvar_assinaturas(assinaturas)
+                    st.info(f"Usuário '{user}' será solicitado a criar nova senha no próximo login.")
+                    st.rerun()
 
-        # --- Botões de Ação Rápida ---
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(f"🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
-                data_base = expiracao if expiracao > agora else agora
-                nova_data = data_base + timedelta(days=30)
-                assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S")
-                assinaturas[user]['email_enviado'] = False # Permite nova notificação
+            with col3:
+                    # Botão para Excluir Usuário (AGORA COM POPOVER PARA CONFIRMAÇÃO)
+                    with st.popover(f"🗑️ Excluir", use_container_width=True): # Botão que abre o popover
+                        st.warning(f"Tem certeza que deseja excluir o usuário '{user}' e TODOS os seus dados (conversas, preferências, etc.)?")
+                        
+                        # Dentro do popover, adicione um botão de confirmação.
+                        # Este botão NÃO precisa de um checkbox separado de confirmação,
+                        # pois o popover já é a etapa de "confirmação".
+                        if st.button(f"✅ Sim, Excluir Definitivamente!", key=f"confirm_delete_final_{user}", type="primary"):
+                            # Exclui a entrada da assinatura
+                            if user in assinaturas:
+                                del assinaturas[user]
+                                salvar_assinaturas(assinaturas)
+                                
+                                # --- EXCLUIR ARQUIVOS DE DADOS DO USUÁRIO ---
+                                chat_file = f"dados/chats_historico_{user}.json"
+                                preferences_file = f"dados/preferencias_{user}.json"
+
+                                if os.path.exists(chat_file):
+                                    os.remove(chat_file)
+                                    st.info(f"Arquivo de chat '{chat_file}' excluído.")
+                                else:
+                                    st.info(f"Arquivo de chat '{chat_file}' não encontrado (já excluído ou nunca existiu).")
+                                
+                                if os.path.exists(preferences_file):
+                                    os.remove(preferences_file)
+                                    st.info(f"Arquivo de preferências '{preferences_file}' excluído.")
+                                else:
+                                    st.info(f"Arquivo de preferências '{preferences_file}' não encontrado (já excluído ou nunca existiu).")
+                                
+                                st.success(f"Usuário '{user}' e todos os seus dados foram excluídos com sucesso.")
+                                st.rerun() # Recarrega a página para refletir a exclusão
+                            else:
+                                st.error(f"Erro: Usuário '{user}' não encontrado no sistema de assinaturas. Não foi possível excluir.")
+
+                        # Opcional: Adicionar um botão de cancelar dentro do popover.
+                        if st.button("Cancelar", key=f"cancel_delete_{user}"):
+                            st.info("Exclusão cancelada.")
+
+            # --- Lógica de Notificação Atualizada (existente) ---
+            if agora >= expiracao and not dados.get("email_enviado", False):
+                # [NOVA ADIÇÃO] Notifica o admin
+                assunto_admin = f"ALERTA: Assinatura de '{user}' Expirou"
+                mensagem_admin = f"A assinatura do usuário '{user}' (email: {dados['email']}) expirou em {dados['expiracao']}."
+                if EMAIL_ADMIN:
+                    enviar_email(EMAIL_ADMIN, assunto_admin, mensagem_admin)
+
+                # [NOVA ADIÇÃO] Notifica o cliente, se a opção estiver ativa
+                if dados.get("notificar_cliente", True):
+                    assunto_cliente = "🔔 Sua assinatura da Jarvis IA expirou"
+                    mensagem_cliente = f"Olá {user},\n\nSua assinatura da Jarvis IA expirou em {expiracao.strftime('%d/%m/%Y')}. Renove para manter seu acesso."
+                    enviar_email(dados["email"], assunto_cliente, mensagem_cliente)
+
+                assinaturas[user]["email_enviado"] = True
                 salvar_assinaturas(assinaturas)
-                st.success(f"Assinatura de '{user}' renovada.")
-                st.rerun()
-        
-        with col2:
-            if st.button(f"❌ Remover", key=f"remover_{user}", type="primary", use_container_width=True):
-                del assinaturas[user]
-                salvar_assinaturas(assinaturas)
-                st.success(f"Assinatura de '{user}' removida.")
-                st.rerun()
-        
-        # --- Lógica de Notificação Atualizada ---
-        if agora >= expiracao and not dados.get("email_enviado", False):
-            # [NOVA ADIÇÃO] Notifica o admin
-            assunto_admin = f"ALERTA: Assinatura de '{user}' Expirou"
-            mensagem_admin = f"A assinatura do usuário '{user}' (email: {dados['email']}) expirou em {dados['expiracao']}."
-            if EMAIL_ADMIN:
-                enviar_email(EMAIL_ADMIN, assunto_admin, mensagem_admin)
-
-            # [NOVA ADIÇÃO] Notifica o cliente, se a opção estiver ativa
-            if dados.get("notificar_cliente", True):
-                assunto_cliente = "🔔 Sua assinatura da Jarvis IA expirou"
-                mensagem_cliente = f"Olá {user},\n\nSua assinatura da Jarvis IA expirou em {expiracao.strftime('%d/%m/%Y')}. Renove para manter seu acesso."
-                enviar_email(dados["email"], assunto_cliente, mensagem_cliente)
-
-            assinaturas[user]["email_enviado"] = True
-            salvar_assinaturas(assinaturas)
-            st.info(f"Notificação de expiração processada para {user}.")
-
+                st.info(f"Notificação de expiração processada para {user}.")
+else:
+    st.info("Nenhuma assinatura encontrada.")
 
 st.divider()
 
