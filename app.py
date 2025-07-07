@@ -34,6 +34,7 @@ import time
 from supabase import create_client, Client
 from pathlib import Path
 from utils import encrypt_file_content_general, decrypt_file_content_general
+from utils import carregar_dados_do_github, salvar_dados_no_github, decrypt_file_content_general, encrypt_file_content_general
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
 # ==============================================================================
@@ -159,12 +160,13 @@ def limpar_pdf_da_memoria():
 def gerar_conteudo_para_pdf(topico):
     """Usa a IA para gerar um texto bem formatado sobre um tópico para o PDF."""
     prompt = f"Por favor, escreva um texto detalhado e bem estruturado sobre o seguinte tópico para ser incluído em um documento PDF. Organize com parágrafos claros e, se apropriado, use listas. Tópico: '{topico}'"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_modelo = modelo.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=2048
-    )
+    model=modelo_selecionado,
+    messages=[{"role": "user", "content": prompt}],
+    temperature=0.7,
+    max_tokens=2048
+)
     return resposta_modelo.choices[0].message.content
 
 
@@ -308,15 +310,38 @@ def extrair_texto_documento(uploaded_file):
     return "Formato de arquivo não suportado."
 
 
+# Em app.py
+
 def gerar_imagem_com_dalle(prompt_para_imagem):
+    """
+    Gera uma imagem com DALL-E 3 e retorna seus dados em formato Base64.
+    """
     try:
-        st.info(
-            f"🎨 Gerando imagem com DALL-E 3 para: '{prompt_para_imagem}'...")
+        st.info(f"🎨 Gerando imagem com DALL-E 3 para: '{prompt_para_imagem}'...")
         response = modelo.images.generate(
-            model="dall-e-3", prompt=prompt_para_imagem, size="1024x1024", quality="standard", n=1)
+            model="dall-e-3", 
+            prompt=prompt_para_imagem, 
+            size="1024x1024", 
+            quality="standard", 
+            n=1
+        )
+        # Pega a URL temporária gerada
         image_url = response.data[0].url
-        st.success("Imagem gerada com sucesso!")
-        return image_url
+
+        # --- NOVA LÓGICA ---
+        # Baixa o conteúdo da imagem a partir da URL
+        st.info("📥 Baixando dados da imagem para armazenamento permanente...")
+        image_response = requests.get(image_url)
+        image_response.raise_for_status() # Verifica se o download foi bem-sucedido
+
+        # Converte os dados da imagem para Base64
+        image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+        
+        st.success("Imagem gerada e armazenada com sucesso!")
+        
+        # Retorna a string Base64, e não mais a URL
+        return f"data:image/png;base64,{image_base64}"
+
     except Exception as e:
         st.error(f"Ocorreu um erro ao gerar a imagem: {e}")
         return None
@@ -324,15 +349,17 @@ def gerar_imagem_com_dalle(prompt_para_imagem):
 
 def classificar_categoria(pergunta):
     prompt = f"Classifique esta pergunta em uma única categoria simples (como geografia, história, sentimentos, programação, etc):\nPergunta: {pergunta}"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta = modelo.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}])
+    model=modelo_selecionado, messages=[{"role": "user", "content": prompt}])
     return resposta.choices[0].message.content.strip().lower()
 
 
 def detectar_tom_emocional(resposta):
     prompt = f"Qual o tom emocional desta resposta? Use uma só palavra: neutro, feliz, triste, sensível, etc.\nResposta: {resposta}"
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_api = modelo.chat.completions.create(
-        model="gpt-4o", messages=[{"role": "user", "content": prompt}])
+    model=modelo_selecionado, messages=[{"role": "user", "content": prompt}])
     return resposta_api.choices[0].message.content.strip().lower()
 
 def detectar_tom_usuario(pergunta_usuario):
@@ -344,8 +371,9 @@ def detectar_tom_usuario(pergunta_usuario):
     Texto do usuário: "{pergunta_usuario}"
     """
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=20
@@ -364,8 +392,9 @@ def detectar_idioma_com_ia(texto_usuario):
     try:
         prompt = f"Qual o código de idioma ISO 639-1 (ex: 'en', 'pt', 'es') do seguinte texto? Responda APENAS com o código de duas letras.\n\nTexto: \"{texto_usuario}\""
         
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=5, # Super curto e rápido
             temperature=0
@@ -461,8 +490,9 @@ def processar_comando_lembrese(texto_do_comando):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             response_format={"type": "json_object"}
@@ -486,74 +516,68 @@ def processar_comando_lembrese(texto_do_comando):
     except Exception as e:
         st.error(f"Ocorreu um erro ao tentar memorizar a preferência: {e}")
 
-def carregar_chats(username): #
-    """Carrega os chats de um arquivo JSON específico do usuário, descriptografando o conteúdo.""" #
-    if not username: #
-        return {} # Retorna um dicionário vazio se não houver nome de usuário
+# Substitua sua função carregar_chats por esta:
 
-    filename = f"dados/chats_historico_{username}.json" # Garanta que o caminho 'dados/' existe
+def carregar_chats(username):
+    """Carrega os chats de um arquivo JSON no GitHub, descriptografando o conteúdo."""
+    if not username:
+        return {}
 
-    if os.path.exists(filename): #
-        try: #
-            with open(filename, "r", encoding="utf-8") as f: #
-                encrypted_file_content = f.read() #
+    filename = f"dados/chats_historico_{username}.json"
+    
+    # MODIFICADO: Carrega o conteúdo diretamente do GitHub
+    encrypted_file_content = carregar_dados_do_github(filename)
 
-            decrypted_file_content = decrypt_file_content_general(encrypted_file_content) # Descriptografa o conteúdo
+    if encrypted_file_content:
+        try:
+            # A lógica de descriptografia e carregamento do JSON permanece a mesma
+            decrypted_file_content = decrypt_file_content_general(encrypted_file_content)
+            return json.loads(decrypted_file_content)
+        except Exception as e:
+            # Fallback para tentar ler como JSON bruto, caso não estivesse criptografado
+            print(f"AVISO: Falha ao descriptografar chats de '{username}' do GitHub. Tentando como JSON bruto. Erro: {e}")
+            try:
+                return json.loads(encrypted_file_content)
+            except json.JSONDecodeError:
+                print(f"ERRO FATAL: Conteúdo do chat de '{username}' do GitHub não é um JSON válido.")
+                return {}
+    
+    # Retorna um dicionário vazio se o arquivo não for encontrado no GitHub
+    return {}
 
-            return json.loads(decrypted_file_content) # Tenta carregar o JSON descriptografado
-        except json.JSONDecodeError: #
-            print(f"AVISO: Conteúdo do arquivo de chat '{filename}' não é JSON válido após descriptografia. Tentando como JSON bruto.") #
-            # Tenta carregar como JSON bruto (caso o arquivo não estivesse criptografado antes)
-            try: #
-                with open(filename, "r", encoding="utf-8") as f: #
-                    return json.load(f) #
-            except json.JSONDecodeError: #
-                print(f"ERRO FATAL: Conteúdo do arquivo de chat '{filename}' não é JSON válido (criptografado ou não). Retornando vazio.") #
-                return {} #
-        except Exception as e: #
-            print(f"Erro ao carregar ou descriptografar chats para '{username}': {e}") #
-            return {} #
-    return {} #
+# Substitua sua função salvar_chats por esta:
 
-def salvar_chats(username): #
+def salvar_chats(username):
     """
-    Salva os chats do usuário, ignorando objetos não-serializáveis como 
-    DataFrames (no nível do chat) e Figuras Plotly (no nível das mensagens).
-    Agora criptografa o conteúdo do arquivo.
+    Salva os chats do usuário no GitHub, ignorando objetos não-serializáveis
+    e criptografando o conteúdo.
     """
-    if not username or "chats" not in st.session_state: #
-        return #
+    if not username or "chats" not in st.session_state:
+        return
 
-    # 1. Cria uma cópia exata e segura do histórico de chats
-    chats_para_salvar = copy.deepcopy(st.session_state.chats) #
+    # 1. Cria uma cópia exata e segura do histórico de chats (LÓGICA MANTIDA)
+    chats_para_salvar = copy.deepcopy(st.session_state.chats)
 
-    # 2. Itera sobre cada chat na CÓPIA
-    for chat_id, chat_data in chats_para_salvar.items(): #
-        # 2a. Remove o DataFrame do nível do chat, se existir
-        if "dataframe" in chat_data: #
-            del chat_data["dataframe"] #
+    # 2. Itera e limpa objetos não-serializáveis (LÓGICA MANTIDA)
+    for chat_id, chat_data in chats_para_salvar.items():
+        if "dataframe" in chat_data:
+            del chat_data["dataframe"]
+        if "messages" in chat_data:
+            mensagens_serializaveis = [msg for msg in chat_data["messages"] if msg.get("type") != "plot"]
+            chat_data["messages"] = mensagens_serializaveis
 
-        # 2b. Filtra a lista de mensagens para remover as que não são serializáveis (type 'plot')
-        if "messages" in chat_data: #
-            mensagens_serializaveis = [] #
-            for msg in chat_data["messages"]: #
-                if msg.get("type") != "plot": # Adiciona a mensagem à nova lista apenas se o tipo NÃO for 'plot'
-                    mensagens_serializaveis.append(msg) #
-            chat_data["messages"] = mensagens_serializaveis # Substitui a lista de mensagens antiga pela nova, já filtrada
+    # 3. Converte para JSON e criptografa (LÓGICA MANTIDA)
+    data_json_string = json.dumps(chats_para_salvar, ensure_ascii=False, indent=4)
+    encrypted_data_string = encrypt_file_content_general(data_json_string)
 
-    # 3. Salva a cópia totalmente limpa no arquivo JSON (agora criptografado)
-    filename = f"dados/chats_historico_{username}.json" # Garanta que o caminho 'dados/' existe
-
-    data_json_string = json.dumps(chats_para_salvar, ensure_ascii=False, indent=4) #
-    encrypted_data_string = encrypt_file_content_general(data_json_string) # Criptografa a string JSON
-
+    # 4. MODIFICADO: Salva a cópia criptografada no GitHub
+    filename = f"dados/chats_historico_{username}.json"
+    mensagem_commit = f"Atualiza chat do usuario {username}"
     try:
-        Path(filename).parent.mkdir(parents=True, exist_ok=True) # Cria o diretório 'dados' se não existir
-        with open(filename, "w", encoding="utf-8") as f: #
-            f.write(encrypted_data_string) # Escreve a STRING CRIPTOGRAFADA
-        print(f"Chats de '{username}' salvos localmente (criptografados).") #
-    except Exception as e: #
-        print(f"Erro ao salvar chats localmente: {e}") #
+        salvar_dados_no_github(filename, encrypted_data_string, mensagem_commit)
+        print(f"Chats de '{username}' salvos no GitHub.")
+    except Exception as e:
+        print(f"Erro ao salvar chats no GitHub: {e}")
 
 
 def escolher_resposta_por_contexto(entry):
@@ -640,11 +664,12 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     mensagens_para_api.extend(historico_chat)
 
     # Chamada final para a OpenAI
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
     resposta_modelo = chamar_openai_com_retries(
-       modelo_openai=modelo,
-       mensagens=mensagens_para_api,
-       modelo="gpt-4o"
-   )
+        modelo_openai=modelo,
+        mensagens=mensagens_para_api,
+        modelo=modelo_selecionado
+    )
     
     if resposta_modelo is None:
        return {
@@ -839,8 +864,9 @@ def gerar_resumo_curto_prazo(historico_chat):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=100
@@ -870,8 +896,9 @@ def gerar_titulo_conversa_com_ia(mensagens):
     """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=15,
             temperature=0.2
@@ -910,8 +937,9 @@ def precisa_buscar_na_web(pergunta_usuario):
     Pergunta do usuário: "{pergunta_usuario}"
     """
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=10
@@ -1009,8 +1037,9 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
 """
 
     try:
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo_codigo = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt_gerador_codigo}],
             temperature=0,
         )
@@ -1062,8 +1091,9 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
         - No final, sugira 2 ou 3 perguntas inteligentes que o usuário poderia fazer para aprofundar a análise.
         """
         
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
         resposta_modelo_interpretacao = modelo.chat.completions.create(
-            model="gpt-4o",
+            model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt_interpretador}],
             temperature=0.4,
         )
@@ -1172,6 +1202,14 @@ with st.sidebar:
         st.sidebar.page_link("pages/2_Status_do_Sistema.py", label="Status do Sistema", icon="📊")
         st.sidebar.page_link("pages/5_Gerenciamento_de_Assinaturas.py", label="Gerenciar Assinaturas", icon="🔑")
         st.sidebar.page_link("pages/6_Visualizar_Feedback.py", label="Visualizar Feedback", icon="📊")
+    
+    # --- Seletor de Modelo (Apenas Admin) ---
+        st.sidebar.radio(
+            "Alternar Modelo OpenAI (Sessão Atual):",
+            options=['gpt-4o', 'gpt-3.5-turbo'],
+            key='admin_model_choice',
+            help="Esta opção afeta apenas a sua sessão de administrador e reseta ao sair. O padrão para todos os outros usuários é sempre gpt-4o."
+        )
     
     # --- RESTO DA SIDEBAR (VISÍVEL PARA TODOS) ---
     st.sidebar.divider()
@@ -1341,6 +1379,24 @@ for i, mensagem in enumerate(active_chat["messages"]):
             st.plotly_chart(mensagem["content"], use_container_width=True)
         elif mensagem.get("type") == "image":
             st.image(mensagem["content"], caption=mensagem.get("prompt", "Imagem gerada"))
+            
+            # --- NOVA LÓGICA DE DOWNLOAD ---
+            try:
+                # Pega a parte de dados da string Base64, removendo o cabeçalho
+                base64_data = mensagem["content"].split(",")[1]
+                # Decodifica de volta para bytes, que é o que o botão de download precisa
+                image_bytes = base64.b64decode(base64_data)
+                
+                # Cria o botão de download
+                st.download_button(
+                    label="📥 Baixar Imagem",
+                    data=image_bytes,
+                    file_name="imagem_gerada_jarvis.png",
+                    mime="image/png"
+                )
+            except Exception as e:
+                st.warning(f"Não foi possível gerar o botão de download: {e}")
+            
         else:
             st.write(mensagem["content"]) # Lógica existente para texto
 
@@ -1415,14 +1471,12 @@ if 'pdf_para_download' in st.session_state:
 # --- ENTRADA DE TEXTO DO USUÁRIO ---
 if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox..."):
 
-    # Adiciona a mensagem do usuário ao histórico para exibição imediata
-    active_chat["messages"].append(
-        {"role": "user", "type": "text", "content": prompt_usuario})
-
-    # Salva o chat imediatamente após adicionar a mensagem do usuário
+    # Adiciona a mensagem do usuário ao histórico
+    active_chat["messages"].append({"role": "user", "type": "text", "content": prompt_usuario})
+    # Salva o chat imediatamente
     salvar_chats(st.session_state["username"])
 
-    # --- PROCESSAMENTO DE COMANDOS ESPECIAIS ---
+    # CORREÇÃO: Toda a lógica de comandos foi movida para DENTRO do 'if'
     if prompt_usuario.lower().startswith("/lembrese "):
         texto_para_lembrar = prompt_usuario[10:].strip()
         if texto_para_lembrar:
@@ -1434,10 +1488,11 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
         prompt_da_imagem = prompt_usuario[9:].strip()
         if prompt_da_imagem:
             with st.chat_message("assistant"):
-                url_da_imagem = gerar_imagem_com_dalle(prompt_da_imagem)
-                if url_da_imagem:
+                dados_da_imagem = gerar_imagem_com_dalle(prompt_da_imagem)
+                if dados_da_imagem:
                     active_chat["messages"].append(
-                        {"role": "assistant", "type": "image", "content": url_da_imagem, "prompt": prompt_da_imagem})
+                        {"role": "assistant", "type": "image", "content": dados_da_imagem, "prompt": prompt_da_imagem}
+                    )
                     salvar_chats(st.session_state["username"])
             st.rerun()
 
@@ -1472,9 +1527,10 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
                 
                 prompt_interpretador = f"""Você é Jarvis, um analista de dados sênior. O usuário pediu um Raio-X completo do dataset. Abaixo estão os resultados brutos. Sua tarefa é criar um relatório claro e com insights, explicando cada seção (resumo estatístico, categorias, valores únicos, dados faltantes e correlações) para o usuário.\n\n--- DADOS BRUTOS ---\n{resultados_brutos}\n--- FIM DOS DADOS BRUTOS ---"""
                 
+                modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
                 resposta_interpretada = modelo.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt_interpretador}]
+                model=modelo_selecionado,
+                messages=[{"role": "user", "content": prompt_interpretador}]
                 ).choices[0].message.content
 
                 active_chat["messages"].append({"role": "assistant", "type": "text", "content": resposta_interpretada})

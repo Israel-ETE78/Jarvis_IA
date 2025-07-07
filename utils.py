@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import re
 from cryptography.fernet import Fernet
-
+from github import Github, UnknownObjectException
 # Garante que as variáveis de ambiente do .env sejam carregadas
 load_dotenv()
 
@@ -101,6 +101,89 @@ def decrypt_file_content_general(encrypted_data_string):
             return encrypted_data_string
     return encrypted_data_string
 
+def decrypt_file_content_general(encrypted_data_string):
+    """Descriptografa uma string criptografada usando a chave Fernet geral."""
+    if fernet_general:
+        try:
+            return fernet_general.decrypt(encrypted_data_string.encode()).decode()
+        except Exception as e:
+            print(f"ERRO: Falha ao descriptografar conteúdo de arquivo geral. Retornando original. Erro: {e}")
+            return encrypted_data_string
+    return encrypted_data_string
+
+@st.cache_data(ttl=300) # Cache para otimizar leituras repetidas
+def carregar_dados_do_github(caminho_arquivo):
+    """Carrega o conteúdo de um arquivo do repositório do GitHub."""
+    try:
+        github_token = st.secrets["GITHUB_TOKEN"]
+        repo_nome = st.secrets["GITHUB_REPO"]
+
+        g = Github(github_token)
+        repo = g.get_repo(repo_nome)
+
+        arquivo = repo.get_contents(caminho_arquivo)
+        conteudo_decodificado = arquivo.decoded_content.decode("utf-8")
+        return conteudo_decodificado
+    except UnknownObjectException:
+        # Normal se o arquivo não existe (ex: novo usuário)
+        return None
+    except Exception as e:
+        st.error(f"Erro ao carregar do GitHub ({caminho_arquivo}): {e}")
+        return None
+
+def salvar_dados_no_github(caminho_arquivo, conteudo, mensagem_commit):
+    """Cria ou atualiza um arquivo no repositório do GitHub."""
+    try:
+        github_token = st.secrets["GITHUB_TOKEN"]
+        repo_nome = st.secrets["GITHUB_REPO"]
+
+        g = Github(github_token)
+        repo = g.get_repo(repo_nome)
+
+        try:
+            arquivo_existente = repo.get_contents(caminho_arquivo)
+            repo.update_file(
+                path=caminho_arquivo,
+                message=mensagem_commit,
+                content=conteudo,
+                sha=arquivo_existente.sha
+            )
+        except UnknownObjectException:
+            repo.create_file(
+                path=caminho_arquivo,
+                message=mensagem_commit,
+                content=conteudo
+            )
+        
+        carregar_dados_do_github.clear() # Limpa o cache para garantir leitura fresca
+        return True
+
+    except Exception as e:
+        st.error(f"Erro ao salvar no GitHub: {e}")
+        return False
+
+def excluir_arquivo_do_github(caminho_arquivo, mensagem_commit):
+    """Exclui um arquivo do repositório do GitHub."""
+    try:
+        github_token = st.secrets["GITHUB_TOKEN"]
+        repo_nome = st.secrets["GITHUB_REPO"]
+
+        g = Github(github_token)
+        repo = g.get_repo(repo_nome)
+        
+        arquivo = repo.get_contents(caminho_arquivo)
+        repo.delete_file(
+            path=arquivo.path,
+            message=mensagem_commit,
+            sha=arquivo.sha
+        )
+        carregar_dados_do_github.clear()
+        return True
+    except UnknownObjectException:
+        return True # Sucesso se o arquivo já não existe
+    except Exception as e:
+        st.error(f"Erro ao excluir do GitHub: {e}")
+        return False
 
 # --- Função de Normalização de Chaves (para nomes de tópicos em preferencias_*.json) ---
 # Usada para garantir consistência em como chaves são armazenadas/acessadas
@@ -116,15 +199,16 @@ def normalize_preference_key(key_string):
 
 # --- FUNÇÕES carregar_preferencias e salvar_preferencias (MUDANÇAS PARA FERNTE) ---
 # Lidam com preferencias_USUARIO.json - Criptografia TOTAL do arquivo.
+# Substitua sua função carregar_preferencias por esta:
+
 def carregar_preferencias(username):
     """
-    Carrega as preferências do Supabase (se conectado) ou do arquivo JSON local como fallback.
-    Descriptografa o conteúdo inteiro do arquivo usando Fernet (chave de preferências).
-    Normaliza as chaves internas do JSON.
+    Carrega as preferências do Supabase (se conectado) ou do GitHub como fallback.
+    Descriptografa o conteúdo e normaliza as chaves.
     """
     data_loaded_raw = {}
 
-    # 1. Tentar carregar do Supabase
+    # 1. Tentar carregar do Supabase (lógica mantida)
     if supabase:
         try:
             response = supabase.table('preferencias').select('data_preferences').eq('username', username).execute()
@@ -132,83 +216,67 @@ def carregar_preferencias(username):
                 print(f"Preferências de '{username}' carregadas do Supabase.")
                 data_from_supabase = response.data[0]['data_preferences']
                 
-                if isinstance(data_from_supabase, str): # Assumimos que Supabase armazena como string criptografada
-                    decrypted_data_str = decrypt_file_content_general(data_from_supabase) # Usa a chave geral para preferencias também
+                # ... (a lógica interna de descriptografia do Supabase permanece a mesma) ...
+                if isinstance(data_from_supabase, str):
+                    decrypted_data_str = decrypt_file_content_general(data_from_supabase)
                     try:
                         data_loaded_raw = json.loads(decrypted_data_str)
                     except json.JSONDecodeError:
-                        print("AVISO: Dados do Supabase não são JSON válido após descriptografia. Tentando como JSON bruto.")
-                        try:
-                            data_loaded_raw = json.loads(data_from_supabase) # Tenta como JSON não criptografado
-                        except json.JSONDecodeError:
-                            print("AVISO: Dados do Supabase não são JSON válido. Retornando vazio.")
-                            return {}
-                elif isinstance(data_from_supabase, dict): # Caso o Supabase armazene como JSON direto (não criptografado no banco)
+                        data_loaded_raw = json.loads(data_from_supabase)
+                elif isinstance(data_from_supabase, dict):
                     data_loaded_raw = data_from_supabase
         except Exception as e:
-            print(f"Erro ao carregar do Supabase, tentando arquivo local. Erro: {e}")
+            print(f"Erro ao carregar do Supabase, tentando fallback do GitHub. Erro: {e}")
     
-    # 2. Fallback para o arquivo local
+    # 2. MODIFICADO: Fallback para o GitHub
     if not data_loaded_raw:
-        print(f"Conexão com Supabase não disponível ou sem dados. Carregando preferências locais para '{username}'.")
-        caminho_arquivo = f"dados/preferencias_{username}.json"
-        if os.path.exists(caminho_arquivo):
-            with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-                encrypted_file_content = f.read()
-                decrypted_file_content = decrypt_file_content_general(encrypted_file_content) # Usa a chave geral
-                try:
-                    data_loaded_raw = json.loads(decrypted_file_content)
-                except json.JSONDecodeError:
-                    print("AVISO: Conteúdo do arquivo local não é JSON válido após descriptografia. Verificando dados originais.")
-                    try:
-                        data_loaded_raw = json.loads(encrypted_file_content) # Tenta como JSON não criptografado
-                    except json.JSONDecodeError:
-                        print("ERRO FATAL: Conteúdo do arquivo local não é JSON válido (criptografado ou não). Retornando vazio.")
-                        return {}
+        print(f"Supabase indisponível ou sem dados. Carregando preferências do GitHub para '{username}'.")
+        caminho_arquivo = f"preferencias/prefs_{username}.json"  # Recomendo usar uma pasta 'preferencias' no GitHub
+        
+        encrypted_file_content = carregar_dados_do_github(caminho_arquivo)
+        
+        if encrypted_file_content:
+            decrypted_file_content = decrypt_file_content_general(encrypted_file_content)
+            try:
+                data_loaded_raw = json.loads(decrypted_file_content)
+            except json.JSONDecodeError:
+                print("AVISO: Conteúdo do GitHub não é JSON válido após descriptografia.")
+                return {}
         else:
-            return {} 
+            return {} # Retorna vazio se não houver preferências em lugar nenhum
 
-    # Normalização das chaves internas do JSON (mantida)
-    normalized_preferences = {}
-    for topico, valor in data_loaded_raw.items():
-        normalized_preferences[normalize_preference_key(topico)] = valor
-    
+    # Normalização das chaves internas do JSON (lógica mantida)
+    normalized_preferences = {normalize_preference_key(k): v for k, v in data_loaded_raw.items()}
     return normalized_preferences
+
+# Substitua sua função salvar_preferencias por esta:
 
 def salvar_preferencias(data, username):
     """
-    Salva as preferências no Supabase (se conectado) e também no arquivo JSON local como backup.
-    Criptografa o conteúdo inteiro do arquivo usando Fernet (chave de preferências).
-    Normaliza as chaves internas do JSON.
+    Salva as preferências no Supabase (se conectado) e também no GitHub como backup.
+    Criptografa o conteúdo inteiro e normaliza as chaves.
     """
-    # Normalização das chaves internas
-    data_to_save_normalized_keys = {}
-    for topico, valor in data.items():
-        data_to_save_normalized_keys[normalize_preference_key(topico)] = valor
-
-    # Converte o dicionário normalizado para string JSON
+    # Normalização e criptografia (lógica mantida)
+    data_to_save_normalized_keys = {normalize_preference_key(k): v for k, v in data.items()}
     data_json_string = json.dumps(data_to_save_normalized_keys, ensure_ascii=False)
+    encrypted_data_string = encrypt_file_content_general(data_json_string)
 
-    # CRIPTOGRAFA a string JSON inteira
-    encrypted_data_string = encrypt_file_content_general(data_json_string) # Usa a chave geral para preferencias também
-
-    # Salvar no Supabase
+    # 1. Salvar no Supabase (lógica mantida)
     if supabase:
         try:
             supabase.table('preferencias').upsert({
                 "username": username,
-                "data_preferences": encrypted_data_string # Salva a STRING CRIPTOGRAFADA
+                "data_preferences": encrypted_data_string
             }).execute()
-            print(f"Preferências de '{username}' salvas no Supabase (criptografadas).")
+            print(f"Preferências de '{username}' salvas no Supabase.")
         except Exception as e:
-            print(f"Erro ao salvar no Supabase (mesmo com criptografia de preferências): {e}")
+            print(f"Erro ao salvar no Supabase: {e}")
     
-    # Backup local
-    caminho_arquivo = f"dados/preferencias_{username}.json"
+    # 2. MODIFICADO: Backup no GitHub
+    caminho_arquivo = f"preferencias/prefs_{username}.json"
+    mensagem_commit = f"Atualiza preferencias do usuario {username}"
     try:
-        Path(caminho_arquivo).parent.mkdir(parents=True, exist_ok=True)
-        with open(caminho_arquivo, 'w', encoding='utf-8') as f:
-            f.write(encrypted_data_string) # Escreve a STRING CRIPTOGRAFADA
-        print(f"Preferências de '{username}' salvas localmente (criptografadas).")
+        salvar_dados_no_github(caminho_arquivo, encrypted_data_string, mensagem_commit)
+        print(f"Preferências de '{username}' salvas no GitHub.")
     except Exception as e:
-        print(f"Erro ao salvar preferências localmente: {e}")
+        print(f"Erro ao salvar preferências no GitHub: {e}")

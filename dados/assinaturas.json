@@ -96,11 +96,12 @@
         "notificar_cliente": false
     },
     "jarvis10": {
-        "senha": "$2b$12$409n54PFpYbH1PeQkSmfKe4.lfVTXfpePhoNehjXZXuRTUKxhRMGO",
-        "ativacao": "2025-07-05 00:17:56",
+        "senha": "$2b$12$xfjXSmG/5lhTZilPQmdnAOUoullyPfFdDDquW/xKsPB/420OE25A.",
+        "ativacao": "2025-07-06 22:52:42",
         "expiracao": "9999-12-31 23:59:59",
         "email": "israelnetmax@gmail.com",
         "email_enviado": false,
-        "notificar_cliente": false
+        "notificar_cliente": false,
+        "primeiro_login": true
     }
 }
