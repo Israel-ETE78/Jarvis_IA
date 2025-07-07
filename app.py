@@ -916,6 +916,10 @@ def precisa_buscar_na_web(pergunta_usuario):
     """
     Usa a OpenAI para decidir rapidamente se uma pergunta requer busca na web.
     """
+    # Verificação direta por palavras-chave que indicam necessidade de busca
+    if any(p in pergunta_usuario.lower() for p in ["link", "vídeo", "site", "inscrição", "cadastro", "url"]):
+        return True
+
     print("Verificando necessidade de busca na web...")
     prompt = f"""
     Analise a pergunta do usuário e determine se ela requer informações em tempo real ou muito recentes para ser respondida com precisão.
@@ -951,19 +955,18 @@ def precisa_buscar_na_web(pergunta_usuario):
         print(f"Erro ao verificar necessidade de busca: {e}")
         return False
 
+
 # FERRAMENTA DE BUSCA
 def buscar_na_internet(pergunta_usuario):
     """
-    Pesquisa a pergunta na web usando a API Serper e retorna um resumo dos resultados.
+    Pesquisa a pergunta na web usando a API Serper e retorna um resumo dos resultados com links.
     """
     print(f"Pesquisando na web por: {pergunta_usuario}")
     
-    #api_key_serper = st.secrets["SERPER_API_KEY"]
     if not api_key_serper:
         return "ERRO: A chave da API Serper não foi configurada."
 
     url = "https://google.serper.dev/search"
-
     payload = json.dumps({"q": pergunta_usuario, "gl": "br", "hl": "pt-br"})
     headers = {'X-API-KEY': api_key_serper, 'Content-Type': 'application/json'}
 
@@ -974,16 +977,21 @@ def buscar_na_internet(pergunta_usuario):
         if not resultados:
             return "Nenhum resultado encontrado na web."
 
-        # Pega os 3 principais resultados para montar o contexto
+        # ✅ Inicializa a lista
         contexto_web = []
+
+        # Monta a resposta com título + descrição + link clicável
         for i, item in enumerate(resultados[:3]):
             titulo = item.get('title', 'Sem título')
             snippet = item.get('snippet', 'Sem descrição')
-            contexto_web.append(f"Fonte {i+1} ({titulo}): {snippet}")
+            link = item.get('link', '#')
+            contexto_web.append(f"🔹 **{titulo}**\n{snippet}\n🔗 [Acessar site]({link})\n")
 
-        return "\n".join(contexto_web)
+        return "\n\n".join(contexto_web)
+
     except Exception as e:
         return f"ERRO ao pesquisar na web: {e}"
+
 
 
 

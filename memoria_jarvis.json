@@ -295,6 +295,15 @@
                     "tom": "neutro"
                 }
             ]
+        },
+        {
+            "pergunta": "o que css?",
+            "respostas": [
+                {
+                    "texto": "CSS, meu querido, significa Cascading Style Sheets, ou Folhas de Estilo em Cascata, em português. É uma linguagem usada para descrever a apresentação de documentos HTML. Enquanto o HTML estrutura o conteúdo, o CSS é responsável por definir como esse conteúdo será exibido visualmente, como cores, layout, fontes e espaçamento, trazendo estilo e beleza às páginas da web. É como a maquiagem da web, dando vida e personalidade ao que antes era apenas estrutura!",
+                    "tom": "neutro"
+                }
+            ]
         }
     ],
     "solicitação de tarefa.": [],
