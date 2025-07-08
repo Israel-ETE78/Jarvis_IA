@@ -7,6 +7,7 @@ import requests
 import json
 import subprocess
 import time
+import sys
 from dotenv import load_dotenv
 
 # pages/2_Status_do_Sistema.py
@@ -129,7 +130,7 @@ with col2:
                 # Uses the absolute path to the script
                 script_path = os.path.join(RAIZ_PROJETO, "treinar_memoria.py")
                 resultado = subprocess.run(
-                    ["python", script_path],
+                    [sys.executable, script_path],
                     capture_output=True, text=True, check=True, encoding='utf-8', cwd=RAIZ_PROJETO
                 )
                 st.success("Cérebro local retreinado com sucesso!")
