@@ -1444,6 +1444,18 @@ for i, mensagem in enumerate(active_chat["messages"]):
                                 salvar_chats(st.session_state["username"])
                                 st.rerun()
 
+# --- SCROLL AUTOMÁTICO NO CHAT ---
+st.markdown("""
+    <script>
+        const chatContainer = window.parent.document.querySelector('.element-container:has(.stChatMessage)');
+        if (chatContainer) {
+            setTimeout(() => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 100);
+        }
+    </script>
+""", unsafe_allow_html=True)
+
 # Lógica de Text-to-Speech (continua aqui)
 # Esta parte não depende de librosa ou PyAudio, pois usa o TTS nativo do navegador.
 if active_chat["messages"] and active_chat["messages"][-1]["role"] == "assistant" and voz_ativada:
