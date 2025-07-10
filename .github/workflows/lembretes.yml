@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '*/30 * * * *'  # ⏰ Executa a cada 30 minutos (UTC)
   workflow_dispatch:         # 🖱️ Permite execução manual
-# Forçando reload do GitHub Actions 💙
+
 
 jobs:
   verificar-lembretes:
@@ -30,7 +30,7 @@ jobs:
         echo "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" >> .env
         echo "EMAIL_ADMIN=${{ secrets.EMAIL_ADMIN }}" >> .env
         echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> .env
-        echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> .env
+        echo "GITHUB_REPO=${{ secrets.EXTERNAL_REPO_PATH }}" >> .env
         echo "ENCRYPTION_KEY_GENERAL=${{ secrets.ENCRYPTION_KEY_GENERAL }}" >> .env
 
     - name: 🚀 Executar verificação de lembretes
