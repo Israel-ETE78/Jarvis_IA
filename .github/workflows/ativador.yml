@@ -1,0 +1,10 @@
+name: Forçar GitHub Actions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Primeira execução ativando GitHub Actions"
