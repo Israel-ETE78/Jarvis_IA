@@ -1199,6 +1199,7 @@ with st.sidebar:
     
     st.sidebar.divider()
     st.sidebar.header("Painel do Usuário")
+    st.sidebar.page_link("pages/7_Lembretes.py", label="Meus Lembretes", icon="⏰")
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
     st.sidebar.page_link("pages/4_Suporte_e_Ajuda.py", label="Suporte e Ajuda", icon="💡")
 

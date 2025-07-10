@@ -280,3 +280,51 @@ def salvar_preferencias(data, username):
         print(f"Preferências de '{username}' salvas no GitHub.")
     except Exception as e:
         print(f"Erro ao salvar preferências no GitHub: {e}")
+        
+
+
+def carregar_lembretes(username):
+    """Carrega os lembretes de um usuário do GitHub, descriptografando o conteúdo."""
+    if not username:
+        return [] # Retorna uma lista vazia se não houver usuário
+
+    caminho_arquivo = f"dados/lembretes/lembretes_{username}.json"
+    
+    encrypted_content = carregar_dados_do_github(caminho_arquivo)
+
+    if encrypted_content:
+        try:
+            decrypted_content = decrypt_file_content_general(encrypted_content)
+            return json.loads(decrypted_content)
+        except Exception as e:
+            print(f"AVISO: Falha ao descriptografar lembretes de '{username}'. Erro: {e}")
+            # Tenta ler como JSON bruto como fallback
+            try:
+                return json.loads(encrypted_content)
+            except json.JSONDecodeError:
+                print(f"ERRO: Conteúdo de lembretes de '{username}' não é JSON válido.")
+                return []
+    
+    return [] # Retorna lista vazia se o arquivo não existir
+
+def salvar_lembretes(username, lembretes_data):
+    """Salva a lista de lembretes do usuário no GitHub de forma criptografada."""
+    if not username:
+        return
+
+    # Garante que os dados a serem salvos sejam uma lista
+    if not isinstance(lembretes_data, list):
+        print("ERRO: Tentativa de salvar lembretes com dados que não são uma lista.")
+        return
+
+    data_json_string = json.dumps(lembretes_data, ensure_ascii=False, indent=4)
+    encrypted_data_string = encrypt_file_content_general(data_json_string)
+
+    caminho_arquivo = f"dados/lembretes/lembretes_{username}.json"
+    mensagem_commit = f"Atualiza lembretes do usuario {username}"
+    
+    try:
+        salvar_dados_no_github(caminho_arquivo, encrypted_data_string, mensagem_commit)
+        print(f"Lembretes de '{username}' salvos no GitHub.")
+    except Exception as e:
+        st.error(f"Erro ao salvar lembretes no GitHub: {e}")
