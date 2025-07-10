@@ -35,7 +35,7 @@ jobs:
         echo "ENCRYPTION_KEY_PREFERENCES=${{ secrets.ENCRYPTION_KEY_PREFERENCES }}" >> .env
         echo "ENCRYPTION_KEY_USERS=${{ secrets.ENCRYPTION_KEY_USERS }}" >> .env
 
-    - name: 🔍 Debugar variáveis de ambiente no Python
+    - name: 🔍 Depurar variáveis de ambiente no Python
       run: |
         python -c "
 import os
