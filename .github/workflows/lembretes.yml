@@ -3,8 +3,7 @@ name: Verificar Lembretes e Enviar Notificações
 on:
   schedule:
     - cron: '*/30 * * * *'    # ⏰ Executa a cada 30 minutos (UTC)
-  workflow_dispatch:        # 🖱️ Permite execução manual
-
+  workflow_dispatch:         # 🖱️ Permite execução manual
 
 jobs:
   verificar-lembretes:
@@ -23,7 +22,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        # Instalar python-dotenv e cryptography se não estiverem no requirements.txt
         pip install python-dotenv cryptography
 
     - name: 🔐 Criar arquivo .env com secrets
@@ -36,20 +34,22 @@ jobs:
         echo "ENCRYPTION_KEY_GENERAL=${{ secrets.ENCRYPTION_KEY_GENERAL }}" >> .env
         echo "ENCRYPTION_KEY_PREFERENCES=${{ secrets.ENCRYPTION_KEY_PREFERENCES }}" >> .env
         echo "ENCRYPTION_KEY_USERS=${{ secrets.ENCRYPTION_KEY_USERS }}" >> .env
-        # Opcional: imprimir o conteúdo do .env para debug. REMOVA DEPOIS!
-        cat .env
 
     - name: 🔍 Debugar variáveis de ambiente no Python
       run: |
-        python -c "import os; from dotenv import load_dotenv; load_dotenv(); \
-        print(f'DEBUG: GMAIL_USER={os.getenv(\"GMAIL_USER\") if os.getenv(\"GMAIL_USER\") else \"None\"}'); \
-        print(f'DEBUG: GMAIL_APP_PASSWORD={os.getenv(\"GMAIL_APP_PASSWORD\")[:5] + '...' if os.getenv(\"GMAIL_APP_PASSWORD\") else 'None'}'); \
-        print(f'DEBUG: EMAIL_ADMIN={os.getenv(\"EMAIL_ADMIN\") if os.getenv(\"EMAIL_ADMIN\") else \"None\"}'); \
-        print(f'DEBUG: GITHUB_TOKEN={os.getenv(\"GITHUB_TOKEN\")[:5] + '...' if os.getenv(\"GITHUB_TOKEN\") else 'None'}'); \
-        print(f'DEBUG: GITHUB_REPO={os.getenv(\"GITHUB_REPO\") if os.getenv(\"GITHUB_REPO\") else \"None\"}'); \
-        print(f'DEBUG: ENCRYPTION_KEY_GENERAL={os.getenv(\"ENCRYPTION_KEY_GENERAL\")[:5] + '...' if os.getenv(\"ENCRYPTION_KEY_GENERAL\") else 'None'}'); \
-        print(f'DEBUG: ENCRYPTION_KEY_PREFERENCES={os.getenv(\"ENCRYPTION_KEY_PREFERENCES\")[:5] + '...' if os.getenv(\"ENCRYPTION_KEY_PREFERENCES\") else 'None'}'); \
-        print(f'DEBUG: ENCRYPTION_KEY_USERS={os.getenv(\"ENCRYPTION_KEY_USERS\")[:5] + '...' if os.getenv(\"ENCRYPTION_KEY_USERS\") else 'None'}')"
+        python -c "
+import os
+from dotenv import load_dotenv
+load_dotenv()
+print(f'DEBUG: GMAIL_USER={os.getenv(\"GMAIL_USER\")}')
+print(f'DEBUG: GMAIL_APP_PASSWORD={os.getenv(\"GMAIL_APP_PASSWORD\")[:5]}...') if os.getenv(\"GMAIL_APP_PASSWORD\") else print('GMAIL_APP_PASSWORD=None')
+print(f'DEBUG: EMAIL_ADMIN={os.getenv(\"EMAIL_ADMIN\")}')
+print(f'DEBUG: GITHUB_TOKEN={os.getenv(\"GITHUB_TOKEN\")[:5]}...') if os.getenv(\"GITHUB_TOKEN\") else print('GITHUB_TOKEN=None')
+print(f'DEBUG: GITHUB_REPO={os.getenv(\"GITHUB_REPO\")}')
+print(f'DEBUG: ENCRYPTION_KEY_GENERAL={os.getenv(\"ENCRYPTION_KEY_GENERAL\")[:5]}...') if os.getenv(\"ENCRYPTION_KEY_GENERAL\") else print('ENCRYPTION_KEY_GENERAL=None')
+print(f'DEBUG: ENCRYPTION_KEY_PREFERENCES={os.getenv(\"ENCRYPTION_KEY_PREFERENCES\")[:5]}...') if os.getenv(\"ENCRYPTION_KEY_PREFERENCES\") else print('ENCRYPTION_KEY_PREFERENCES=None')
+print(f'DEBUG: ENCRYPTION_KEY_USERS={os.getenv(\"ENCRYPTION_KEY_USERS\")[:5]}...') if os.getenv(\"ENCRYPTION_KEY_USERS\") else print('ENCRYPTION_KEY_USERS=None')
+"
 
     - name: 🚀 Executar verificação de lembretes
       run: python verificador_lembretes.py
