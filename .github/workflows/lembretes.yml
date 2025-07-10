@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '*/30 * * * *'  # ⏰ Executa a cada 30 minutos (UTC)
   workflow_dispatch:         # 🖱️ Permite execução manual
+# Forçando reload do GitHub Actions 💙
 
 jobs:
   verificar-lembretes:
