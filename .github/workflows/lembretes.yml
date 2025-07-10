@@ -3,7 +3,8 @@ name: Verificar Lembretes e Enviar Notificações
 on:
   schedule:
     - cron: '*/30 * * * *'    # ⏰ Executa a cada 30 minutos (UTC)
-  workflow_dispatch:         # 🖱️ Permite execução manual
+  workflow_dispatch:        # 🖱️ Permite execução manual
+
 
 jobs:
   verificar-lembretes:
@@ -26,14 +27,16 @@ jobs:
 
       - name: 🔐 Criar arquivo .env com secrets
         run: |
-echo "GMAIL_USER=${{ secrets.GMAIL_USER }}" >> .env
-echo "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" >> .env
-echo "EMAIL_ADMIN=${{ secrets.EMAIL_ADMIN }}" >> .env
-echo "GITHUB_TOKEN=${{ secrets.CUSTOM_GITHUB_PAT }}" >> .env
-echo "GITHUB_REPO=Israel-ETE78/banco_dados_streamlit" >> .env
-echo "ENCRYPTION_KEY_GENERAL=${{ secrets.ENCRYPTION_KEY_GENERAL }}" >> .env
-echo "ENCRYPTION_KEY_PREFERENCES=${{ secrets.ENCRYPTION_KEY_PREFERENCES }}" >> .env
-echo "ENCRYPTION_KEY_USERS=${{ secrets.ENCRYPTION_KEY_USERS }}" >> .env
+          echo "GMAIL_USER=${{ secrets.GMAIL_USER }}" >> .env
+          echo "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" >> .env
+          echo "EMAIL_ADMIN=${{ secrets.EMAIL_ADMIN }}" >> .env
+          echo "GITHUB_TOKEN=${{ secrets.CUSTOM_GITHUB_PAT }}" >> .env # Usando o PAT personalizado
+          echo "GITHUB_REPO=Israel-ETE78/banco_dados_streamlit" >> .env # Nome do repositório alvo
+          echo "ENCRYPTION_KEY_GENERAL=${{ secrets.ENCRYPTION_KEY_GENERAL }}" >> .env
+          echo "ENCRYPTION_KEY_PREFERENCES=${{ secrets.ENCRYPTION_KEY_PREFERENCES }}" >> .env
+          echo "ENCRYPTION_KEY_USERS=${{ secrets.ENCRYPTION_KEY_USERS }}" >> .env
+          # Se você quiser imprimir o .env para verificar, adicione a linha abaixo
+          # cat .env 
 
       - name: 🚀 Executar verificação de lembretes
         run: python verificador_lembretes.py
