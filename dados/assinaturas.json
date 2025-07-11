@@ -20,7 +20,7 @@
         "ativacao": "2025-07-04 18:11:28",
         "expiracao": "2025-07-10 18:11:28",
         "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
+        "email_enviado": true,
         "notificar_cliente": true
     },
     "jarvis01": {
@@ -112,5 +112,14 @@
         "email_enviado": false,
         "notificar_cliente": false,
         "primeiro_login": false
+    },
+    "teste": {
+        "senha": "$2b$12$6iQIl9hAG8aD8/43jgA3wu9Lvn191Oj7dMsBr281HsVpx6VD3Opwm",
+        "ativacao": "2025-07-10 23:08:19",
+        "expiracao": "2025-07-10 23:08:19",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": true,
+        "notificar_cliente": true,
+        "primeiro_login": true
     }
 }
