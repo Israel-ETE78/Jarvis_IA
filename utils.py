@@ -231,7 +231,7 @@ def carregar_preferencias(username):
     # 2. MODIFICADO: Fallback para o GitHub
     if not data_loaded_raw:
         print(f"Supabase indisponível ou sem dados. Carregando preferências do GitHub para '{username}'.")
-        caminho_arquivo = f"preferencias/prefs_{username}.json"  # Recomendo usar uma pasta 'preferencias' no GitHub
+        caminho_arquivo = f"dados/preferencias/prefs_{username}.json"  # Recomendo usar uma pasta 'preferencias' no GitHub
         
         encrypted_file_content = carregar_dados_do_github(caminho_arquivo)
         
@@ -256,12 +256,12 @@ def salvar_preferencias(data, username):
     Salva as preferências no Supabase (se conectado) e também no GitHub como backup.
     Criptografa o conteúdo inteiro e normaliza as chaves.
     """
-    # Normalização e criptografia (lógica mantida)
+    # Normalização e criptografia
     data_to_save_normalized_keys = {normalize_preference_key(k): v for k, v in data.items()}
     data_json_string = json.dumps(data_to_save_normalized_keys, ensure_ascii=False)
     encrypted_data_string = encrypt_file_content_general(data_json_string)
 
-    # 1. Salvar no Supabase (lógica mantida)
+    # 1. Salvar no Supabase
     if supabase:
         try:
             supabase.table('preferencias').upsert({
@@ -271,6 +271,16 @@ def salvar_preferencias(data, username):
             print(f"Preferências de '{username}' salvas no Supabase.")
         except Exception as e:
             print(f"Erro ao salvar no Supabase: {e}")
+    
+    # 2. Backup correto no GitHub (ajustado para 'dados/preferencias/')
+    caminho_arquivo = f"dados/preferencias/prefs_{username}.json"
+    mensagem_commit = f"Atualiza preferencias do usuario {username}"
+    try:
+        salvar_dados_no_github(caminho_arquivo, encrypted_data_string, mensagem_commit)
+        print(f"Preferências de '{username}' salvas no GitHub.")
+    except Exception as e:
+        print(f"Erro ao salvar preferências no GitHub: {e}")
+
     
     # 2. MODIFICADO: Backup no GitHub
     caminho_arquivo = f"preferencias/prefs_{username}.json"
