@@ -169,15 +169,12 @@ if assinaturas:
                             # --- EXCLUIR ARQUIVOS DE DADOS DO USUÁRIO NO GITHUB ---
                             chat_path = f"dados/chats_historico_{user}.json"
                             preferences_path = f"preferencias/prefs_{user}.json"
-                            reminders_path = f"dados/lembretes/lembretes_{user}.json"
 
                             excluir_arquivo_do_github(chat_path, f"Admin excluiu chat de {user}")
                             st.info(f"Solicitação para excluir chat de '{user}' enviada.")
                             
                             excluir_arquivo_do_github(preferences_path, f"Admin excluiu preferencias de {user}")
                             st.info(f"Solicitação para excluir preferências de '{user}' enviada.")
-                            excluir_arquivo_do_github(reminders_path, f"Admin excluiu lembretes de {user}")
-                            st.info(f"Solicitação para excluir lembretes de '{user}' enviada.")
 
                             st.success(f"Usuário '{user}' e seus dados foram excluídos com sucesso.")
                             st.rerun()
