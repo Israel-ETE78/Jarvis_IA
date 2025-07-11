@@ -2,15 +2,16 @@ import json
 import os
 from datetime import datetime
 import logging
-from cryptography.fernet import Fernet # Importe Fernet para criptografia
+from cryptography.fernet import Fernet
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
 
-# --- Carregar variáveis de ambiente (para GMAIL_USER, GMAIL_APP_PASSWORD, LEMBRETES_ENCRYPTION_KEY) ---
-# Assumindo que o .env está na raiz do projeto (um nível acima do script se ele estiver na pasta 'pages' ou 'scripts')
+# --- Carregar variáveis de ambiente ---
+# Assumindo que o .env está na raiz do projeto
 script_dir = os.path.dirname(__file__)
-project_root = os.path.abspath(os.path.join(script_dir, os.pardir)) # Vai para o diretório pai
+# Navega para o diretório pai (raiz do projeto) onde o .env deve estar
+project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
 dotenv_path = os.path.join(project_root, '.env')
 load_dotenv(dotenv_path)
 
@@ -26,20 +27,21 @@ logging.basicConfig(
 )
 # --- Fim da Configuração do Logging ---
 
-# --- Configuração da Criptografia ---
+# --- Configuração da Criptografia para Lembretes ---
 cipher_suite = None
 try:
-    chave_criptografia = os.environ.get('LEMBRETES_ENCRYPTION_KEY')
+    # Usando ENCRYPTION_KEY_GENERAL para lembretes
+    chave_criptografia = os.environ.get('ENCRYPTION_KEY_GENERAL')
     
     if chave_criptografia:
         cipher_suite = Fernet(chave_criptografia.encode('utf-8'))
-        logging.info("Chave de criptografia carregada com sucesso.")
+        logging.info("Chave de criptografia 'ENCRYPTION_KEY_GENERAL' carregada com sucesso para lembretes.")
     else:
-        logging.critical("ERRO CRÍTICO: Variável de ambiente 'LEMBRETES_ENCRYPTION_KEY' não definida. Abortando.")
-        exit(1) # Sai se a chave não estiver configurada (essencial para criptografia)
+        logging.critical("ERRO CRÍTICO: Variável de ambiente 'ENCRYPTION_KEY_GENERAL' não definida. Abortando. Esta chave é essencial para descriptografar lembretes.")
+        exit(1)
         
 except Exception as e:
-    logging.critical(f"ERRO CRÍTICO: Falha ao inicializar a chave de criptografia. Abortando. Erro: {e}")
+    logging.critical(f"ERRO CRÍTICO: Falha ao inicializar a chave de criptografia Fernet. Abortando. Erro: {e}")
     exit(1)
 
 # --- Configuração de E-mail ---
@@ -66,7 +68,7 @@ def enviar_email(destinatario, assunto, mensagem):
         return False
 
 def carregar_assinaturas():
-    """Carrega as assinaturas do arquivo dados/assinaturas.json."""
+    """Carrega as assinaturas do arquivo dados/assinaturas.json (sem criptografia por este script)."""
     # Caminho ajustado para 'dados/assinaturas.json' a partir da raiz do projeto
     caminho_assinaturas = os.path.join(project_root, 'dados', 'assinaturas.json')
     try:
@@ -74,7 +76,7 @@ def carregar_assinaturas():
             with open(caminho_assinaturas, 'r', encoding='utf-8') as f:
                 return json.load(f)
         else:
-            logging.error(f"ERRO: Arquivo de assinaturas '{caminho_assinaturas}' não encontrado.")
+            logging.error(f"ERRO: Arquivo de assinaturas '{caminho_assinaturas}' não encontrado. Verifique o caminho.")
             return {}
     except json.JSONDecodeError as e:
         logging.error(f"ERRO: Falha ao decodificar JSON do arquivo '{caminho_assinaturas}'. Conteúdo inválido? Erro: {e}")
