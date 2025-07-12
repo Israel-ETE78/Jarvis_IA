@@ -14,14 +14,7 @@
         "email": "israelnetmax@gmail.com",
         "email_enviado": false,
         "notificar_cliente": false
-    },
-    "etecicero": {
-        "senha": "$2b$12$N0JcTEf1hPT7vqEF19.2nuRTtj241Ja5Tom8WJM9D6A6z.4xPBC9e",
-        "ativacao": "2025-07-04 18:11:28",
-        "expiracao": "2025-07-10 18:11:28",
-        "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
-        "notificar_cliente": true
+
     },
     "jarvis01": {
         "senha": "$2b$12$NBNNKF53qIImLlmHC/PnfuM0hmuDEDiToe5b06yAPCmwfvbNSFcGy",
