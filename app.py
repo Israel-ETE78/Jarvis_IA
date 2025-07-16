@@ -1201,6 +1201,33 @@ with st.sidebar:
     st.sidebar.header("Painel do Usuário")
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py", label="Minhas Preferências", icon="⚙️")
     st.sidebar.page_link("pages/4_Suporte_e_Ajuda.py", label="Suporte e Ajuda", icon="💡")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📚 Ferramentas Externas")
+
+    st.sidebar.markdown("""
+    <style>
+    a.link-button {
+    display: block;
+    background-color: #1f77b4;
+    color: white !important;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    margin: 5px 0;
+    font-weight: bold;
+    transition: 0.3s;
+    }
+    a.link-button:hover {
+    background-color: #005fa3;
+    }
+    </style>
+
+    <a class='link-button' href='https://jarvis-lembrete.streamlit.app/' target='_blank'>🔔 Jarvis Lembrete</a>
+    <a class='link-button' href='https://jarvis-ia-video-analysis.streamlit.app/' target='_blank'>🎥 Analisador de Mídia</a>
+    """, unsafe_allow_html=True)
+
 
     # --- PAINEL DO ADMIN (SÓ APARECE SE FOR O ADMIN) ---
     if st.session_state.get("username") == ADMIN_USERNAME:
