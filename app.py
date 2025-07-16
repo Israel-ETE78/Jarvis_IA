@@ -87,7 +87,7 @@ def chamar_openai_com_retries(modelo_openai, mensagens, modelo="gpt-4o", max_ten
     """
     for tentativa in range(1, max_tentativas + 1):
         try:
-            st.info(f"⏳ Enviando solicitação à OpenAI (tentativa {tentativa})...")
+            st.info(f"⏳ Um instante... (consulta {tentativa}) em andamento")
             resposta = modelo_openai.chat.completions.create(
                 model=modelo,
                 messages=mensagens
@@ -655,7 +655,7 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     else:
         # --- ETAPA 3: Se não precisa de busca, usa o fluxo de chat padrão ---
         logging.info("Pergunta não requer busca na web, consultando a OpenAI.")
-        st.info("Consultando a OpenAI...")
+        st.info("🔍 Pesquisando dados...")
         
         prompt_sistema = f"{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente prestativo."
         
