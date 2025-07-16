@@ -122,25 +122,31 @@ setup_logging()
 # --- CARREGAR O MODELO E FERRAMENTAS ---
 
 @st.cache_resource
-def carregar_modelos_locais():
-    """
-    Carrega os modelos locais apenas uma vez e guarda em cache.
-    Removido o carregamento de modelo_emocoes_voz.joblib pois não há funcionalidade de áudio.
-    """
-    print("Executando CARGA PESADA do cérebro local (isso só deve aparecer uma vez)...")
+def carregar_modelo_embedding():
+    """Carrega o modelo de embedding que é pesado e não muda."""
+    print("Executando CARGA PESADA do modelo de embedding (isso só deve aparecer uma vez)...")
     try:
-        modelo_emb = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        vetores_p = np.load('vetores_perguntas_v2.npy')
-        base_conhecimento = joblib.load('dados_conhecimento_v2.joblib')
-        
-        return modelo_emb, vetores_p, base_conhecimento
+        return SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
     except Exception as e:
-        print(f"Erro ao carregar modelos locais: {e}")
-        return None, None, None
+        print(f"Erro fatal ao carregar o modelo de embedding: {e}")
+        return None
 
+def inicializar_memoria_dinamica():
+    """Carrega os vetores e a base de conhecimento no estado da sessão, se ainda não estiverem lá."""
+    if 'vetores_perguntas' not in st.session_state:
+        print("Inicializando memória dinâmica na sessão...")
+        try:
+            st.session_state.vetores_perguntas = np.load('vetores_perguntas_v2.npy')
+            st.session_state.base_de_conhecimento = joblib.load('dados_conhecimento_v2.joblib')
+            print("Memória dinâmica carregada com sucesso.")
+        except Exception as e:
+            print(f"Erro ao carregar arquivos de memória (.npy, .joblib): {e}")
+            st.session_state.vetores_perguntas = None
+            st.session_state.base_de_conhecimento = None
 
-# --- CARREGAR O MODELO E FERRAMENTAS ---
-modelo_embedding, vetores_perguntas, base_de_conhecimento = carregar_modelos_locais()
+# --- CARREGAR O MODELO E INICIALIZAR A MEMÓRIA ---
+modelo_embedding = carregar_modelo_embedding()
+inicializar_memoria_dinamica() # Garante que a memória está pronta na sessão
 
 # Exibe a mensagem de status no painel lateral
 if modelo_embedding:
@@ -609,11 +615,13 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
     idioma_da_pergunta = detectar_idioma_com_ia(pergunta_usuario)
     instrucao_idioma_reforcada = f"Sua regra mais importante e inegociável é responder estritamente no seguinte idioma: '{idioma_da_pergunta}'. Não use nenhum outro idioma sob nenhuma circunstância."
 
-    # --- ETAPA 1: Tenta responder com a memória local primeiro ---
-    if modelo_embedding:
+# --- ETAPA 1: Tenta responder com a memória local primeiro ---
+    # MODIFICADO: Verifica se o modelo e a memória da sessão estão disponíveis
+    if modelo_embedding and st.session_state.get('vetores_perguntas') is not None:
         try:
             vetor_pergunta_usuario = modelo_embedding.encode([pergunta_usuario])
-            scores_similaridade = cosine_similarity(vetor_pergunta_usuario, vetores_perguntas)
+            # MODIFICADO: Usa os vetores do st.session_state
+            scores_similaridade = cosine_similarity(vetor_pergunta_usuario, st.session_state.vetores_perguntas)
             indice_melhor_match = np.argmax(scores_similaridade)
             score_maximo = scores_similaridade[0, indice_melhor_match]
             LIMIAR_CONFIANCA = 0.8
@@ -621,7 +629,8 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, resumo_
             if score_maximo > LIMIAR_CONFIANCA:
                 logging.info(f"Resposta encontrada na memória local com confiança de {score_maximo:.2%}.")
                 st.info(f"Resposta encontrada na memória local (Confiança: {score_maximo:.2%}) 🧠")
-                respostas_possiveis = base_de_conhecimento['respostas'][indice_melhor_match]
+                # MODIFICADO: Usa a base de conhecimento do st.session_state
+                respostas_possiveis = st.session_state.base_de_conhecimento['respostas'][indice_melhor_match]
                 resposta_local = random.choice(respostas_possiveis)['texto']
                 return {"texto": resposta_local, "origem": "local"}
             
@@ -784,11 +793,36 @@ def processar_entrada_usuario(prompt_usuario, tom_voz=None):
 
     
 
-def adicionar_a_memoria(pergunta, resposta):
-    """Adiciona um novo par de pergunta/resposta à memória local."""
+def adicionar_a_memoria(pergunta, resposta, modelo_emb):
+    """
+    Adiciona um novo par de pergunta/resposta à memória dinâmica da sessão ATUAL
+    e também persiste no arquivo JSON para o futuro.
+    """
+    if modelo_emb is None or st.session_state.get('vetores_perguntas') is None:
+        st.error("O modelo de embedding ou a base de vetores não está carregado. Não é possível adicionar à memória.")
+        return
+
     try:
-        memoria_atual = carregar_memoria()
-        # Usa a função que já temos para classificar a categoria
+        # --- ETAPA 1: ATUALIZAR A MEMÓRIA EM TEMPO DE EXECUÇÃO (SESSION_STATE) ---
+        
+        # 1.1. Calcular o vetor (embedding) da nova pergunta
+        st.info("Calculando o embedding para a nova memória...")
+        novo_vetor = modelo_emb.encode([pergunta])
+
+        # 1.2. Adicionar o novo vetor à matriz de vetores existente
+        st.session_state.vetores_perguntas = np.vstack([st.session_state.vetores_perguntas, novo_vetor])
+        
+        # 1.3. Adicionar a nova resposta à base de conhecimento
+        # A estrutura deve ser a mesma do seu arquivo .joblib. 
+        # Assumindo que é uma lista de dicionários de respostas.
+        nova_resposta_formatada = {'texto': resposta, 'tom': 'neutro'}
+        st.session_state.base_de_conhecimento['respostas'].append([nova_resposta_formatada])
+
+        st.toast("✅ Memória dinâmica atualizada para esta sessão!", icon="🧠")
+        print(f"Novo tamanho da matriz de vetores: {st.session_state.vetores_perguntas.shape}")
+
+        # --- ETAPA 2: PERSISTIR A MEMÓRIA NO ARQUIVO JSON PARA REINICIALIZAÇÕES FUTURAS ---
+        memoria_persistente = carregar_memoria() # Carrega o memoria_jarvis.json
         categoria = classificar_categoria(pergunta)
 
         nova_entrada = {
@@ -796,19 +830,18 @@ def adicionar_a_memoria(pergunta, resposta):
             "respostas": [{"texto": resposta, "tom": "neutro"}]
         }
 
-        if categoria not in memoria_atual:
-            memoria_atual[categoria] = []
+        if categoria not in memoria_persistente:
+            memoria_persistente[categoria] = []
 
-        # Evita adicionar duplicatas exatas
-        if not any(item["pergunta"].lower() == pergunta.lower() for item in memoria_atual[categoria]):
-            memoria_atual[categoria].append(nova_entrada)
-            salvar_memoria(memoria_atual)
-            st.toast("✅ Memória atualizada com sucesso!", icon="🧠")
+        if not any(item["pergunta"].lower() == pergunta.lower() for item in memoria_persistente[categoria]):
+            memoria_persistente[categoria].append(nova_entrada)
+            salvar_memoria(memoria_persistente) # Salva no memoria_jarvis.json
+            st.toast("💾 Memória também salva permanentemente no JSON.", icon="📝")
         else:
-            st.toast("Essa pergunta já existe na memória.", icon="💡")
+            st.toast("Essa pergunta já existe na memória permanente.", icon="💡")
 
     except Exception as e:
-        st.error(f"Erro ao salvar na memória: {e}")
+        st.error(f"Erro ao atualizar a memória dinâmica: {e}")
 
 def salvar_feedback(username, rating, comment):
     """Salva o feedback do usuário em um arquivo JSON."""
@@ -1449,7 +1482,8 @@ for i, mensagem in enumerate(active_chat["messages"]):
                 # Coluna 1: Botão Salvar
                 with cols[0]:
                     if st.button("✅", key=f"save_{i}", help="Salvar resposta na memória"):
-                        adicionar_a_memoria(pergunta_original, resposta_original)
+                        # MODIFICADO: Passa o modelo de embedding para a função
+                        adicionar_a_memoria(pergunta_original, resposta_original, modelo_embedding)
                         mensagem["origem"] = "openai_curado"
                         salvar_chats(st.session_state["username"])
                         st.rerun()

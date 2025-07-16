@@ -8,6 +8,15 @@
                     "tom": "neutro"
                 }
             ]
+        },
+        {
+            "pergunta": "Qual a moeda principal de Dubai?",
+            "respostas": [
+                {
+                    "texto": "A moeda principal de Dubai é o Dirham dos Emirados Árabes Unidos, simbolizado como AED. Se precisar saber algo mais sobre essa fascinante cidade ou qualquer outro assunto, estou aqui para ajudar.",
+                    "tom": "neutro"
+                }
+            ]
         }
     ],
     "geografia": [
