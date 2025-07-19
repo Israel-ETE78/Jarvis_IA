@@ -35,6 +35,12 @@ from supabase import create_client, Client
 from pathlib import Path
 from utils import encrypt_file_content_general, decrypt_file_content_general
 from utils import carregar_dados_do_github, salvar_dados_no_github, decrypt_file_content_general, encrypt_file_content_general
+
+# ✅ Bloco de ping para manter o app acordado
+params = st.query_params
+if "ping" in params:
+    st.write("✅ Jarvis IA está online!")
+    st.stop()
 # ==============================================================================
 # === 2. VERIFICAÇÃO DE LOGIN E CONFIGURAÇÃO INICIAL
 # ==============================================================================
