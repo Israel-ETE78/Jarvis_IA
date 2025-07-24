@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 
 load_dotenv()
+ADMIN_USERNAME = st.secrets.get("ADMIN_USERNAME") or os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD")
 
 # --- Funções Auxiliares (carregar_assinaturas E salvar_assinaturas) ---
 def carregar_assinaturas(): #
@@ -33,6 +35,12 @@ def salvar_assinaturas(assinaturas_data): #
         json.dump(assinaturas_data, f, ensure_ascii=False, indent=4) #
     print(f"Assinaturas salvas em '{caminho_arquivo}'.") #
 
+def carregar_lista_usuarios():
+    """
+    Carrega a lista de todos os usuários a partir do arquivo de assinaturas.
+    """
+    assinaturas = carregar_assinaturas() # Usa a função existente para carregar os dados
+    return sorted(list(assinaturas.keys())) # Retorna as chaves (nomes de usuário) ordenadas
 
 def handle_password_change(): #
     """Exibe o formulário de alteração de senha forçada para o primeiro login.""" #
@@ -75,6 +83,20 @@ def handle_password_change(): #
         
     return False # Continua exibindo o formulário de alteração de senha até ser bem-sucedido
 
+def get_current_username():
+    """
+    Retorna o nome de usuário atualmente logado na sessão do Streamlit.
+    Retorna 'anonimo' se nenhum usuário estiver logado.
+    """
+    return st.session_state.get("username", "anonimo")
+
+def is_admin(username):
+    """
+    Verifica se o nome de usuário fornecido é o administrador.
+    """
+    # Certifique-se de que ADMIN_USERNAME está definido globalmente ou importado/passado
+    # Se ADMIN_USERNAME é carregado via st.secrets ou os.getenv, ele já será acessível aqui.
+    return username == ADMIN_USERNAME
 
 # --- Lógica Principal de Autenticação ---
 def check_password(): #

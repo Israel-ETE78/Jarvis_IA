@@ -139,13 +139,31 @@ if assinaturas:
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button(f"🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
-                    # ... (código de renovação, que já estava correto) ...
+                    try:
+                        # Tenta converter a string de expiração para um objeto datetime
+                        # Assumindo que 'expiracao' aqui é a string da data salva para o usuário
+                        expiracao = datetime.fromisoformat(dados['expiracao']) # Use 'dados' ou como você estiver acessando a data de expiração da assinatura
+                    except ValueError:
+                        # Se a data for inválida ou fora do intervalo, defina uma data padrão razoável
+                        print(f"AVISO: Data de expiração inválida para o usuário {user}: {dados['expiracao']}. Redefinindo.")
+                        expiracao = datetime.now() + timedelta(days=30) # Ou outra data padrão
+
+                    # O resto do seu código de renovação
+                    agora = datetime.now()
                     data_base = expiracao if expiracao > agora else agora
-                    nova_data = data_base + timedelta(days=30)
-                    assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S")
+
+                    # Verifica se a nova data não excede o limite máximo de datetime
+                    if data_base.year > (datetime.max.year - 1): # Deixa uma margem de segurança
+                        st.error(f"Erro: A data de expiração para o usuário {user} está muito longe no futuro. Não é possível renovar.")
+                        # Você pode optar por não fazer nada ou definir uma data máxima permitida
+                        nova_data = datetime.max
+                    else:
+                        nova_data = data_base + timedelta(days=30)
+
+                    assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S") # Ou o formato ISO se preferir
                     assinaturas[user]['email_enviado'] = False
                     salvar_assinaturas(assinaturas)
-                    st.success(f"Assinatura de '{user}' renovada.")
+                    st.success(f"Assinatura de {user} renovada com sucesso para {nova_data.strftime('%Y-%m-%d %H:%M:%S')}!")
                     st.rerun()
 
             with col2:
@@ -156,11 +174,10 @@ if assinaturas:
                     st.info(f"Usuário '{user}' será solicitado a criar nova senha no próximo login.")
                     st.rerun()
 
-            # CORRIGIDO: Bloco 'with col3' movido para a indentação correta, dentro do 'for loop'.
             with col3:
                 with st.popover(f"🗑️ Excluir", use_container_width=True):
                     st.warning(f"Tem certeza que deseja excluir '{user}' e TODOS os seus dados?")
-                    
+
                     if st.button(f"✅ Sim, Excluir Definitivamente!", key=f"confirm_delete_final_{user}", type="primary"):
                         if user in assinaturas:
                             del assinaturas[user]
@@ -169,15 +186,29 @@ if assinaturas:
                             # --- EXCLUIR ARQUIVOS DE DADOS DO USUÁRIO NO GITHUB ---
                             chat_path = f"dados/chats_historico_{user}.json"
                             preferences_path = f"preferencias/prefs_{user}.json"
+                            emocoes_path = f"dados/emocoes_{user}.json"
+                            reflexoes_path = f"reflexoes/reflexoes_{user}.json"
 
                             excluir_arquivo_do_github(chat_path, f"Admin excluiu chat de {user}")
-                            st.info(f"Solicitação para excluir chat de '{user}' enviada.")
-                            
                             excluir_arquivo_do_github(preferences_path, f"Admin excluiu preferencias de {user}")
-                            st.info(f"Solicitação para excluir preferências de '{user}' enviada.")
+                            excluir_arquivo_do_github(emocoes_path, f"Admin excluiu emoções de {user}")
+                            excluir_arquivo_do_github(reflexoes_path, f"Admin excluiu reflexões de {user}")
+                            st.info(f"Todos os dados no GitHub de '{user}' foram solicitados para exclusão.")
 
-                            st.success(f"Usuário '{user}' e seus dados foram excluídos com sucesso.")
+                            # --- REMOVER ARQUIVOS LOCAIS (extra segurança) ---
+                            arquivos_locais = [
+                                chat_path,
+                                preferences_path,
+                                emocoes_path,
+                                reflexoes_path
+                            ]
+                            for caminho in arquivos_locais:
+                                if os.path.exists(caminho):
+                                    os.remove(caminho)
+
+                            st.success(f"Usuário '{user}' e todos os seus dados foram excluídos com sucesso.")
                             st.rerun()
+
                     
                     if st.button("Cancelar", key=f"cancel_delete_{user}"):
                         st.info("Exclusão cancelada.")

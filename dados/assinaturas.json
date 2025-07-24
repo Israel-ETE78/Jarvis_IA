@@ -1,21 +1,4 @@
 {
-    "leidy": {
-        "senha": "$2b$12$4uI59AHTdxm.OrF/y.QZV.bEJQHXP4Z/2f.ti9HFL2lOmxn18CjLW",
-        "ativacao": "2025-06-30 01:53:26",
-        "expiracao": "9999-12-31 23:59:59",
-        "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
-        "notificar_cliente": false
-    },
-    "bia": {
-        "senha": "$2b$12$5CTIXVvo9ylPuEIOZHJ4n.Q76zzJUOktsUInrC.JP5nbYOA47UPiS",
-        "ativacao": "2025-06-30 01:54:36",
-        "expiracao": "9999-12-31 23:59:59",
-        "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
-        "notificar_cliente": false
-
-    },
     "jarvis01": {
         "senha": "$2b$12$NBNNKF53qIImLlmHC/PnfuM0hmuDEDiToe5b06yAPCmwfvbNSFcGy",
         "ativacao": "2025-07-05 00:11:26",
@@ -96,5 +79,41 @@
         "email_enviado": false,
         "notificar_cliente": false,
         "primeiro_login": true
+    },
+    "teste": {
+        "senha": "$2b$12$emwNk.ugil7.gYE4xHh3JOW/lRQv5KuL2gcEVMZVc90XA3SqVCgju",
+        "ativacao": "2025-07-23 15:40:02",
+        "expiracao": "2025-08-22 15:40:02",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": true,
+        "primeiro_login": false
+    },
+    "ingrid": {
+        "senha": "$2b$12$SlXErV5e2pu73WLDfYN2Su4PELcugpx5amugdSoKKH5K0dtr51ZWm",
+        "ativacao": "2025-07-24 00:24:09",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "123456",
+        "email_enviado": false,
+        "notificar_cliente": false,
+        "primeiro_login": true
+    },
+    "bia": {
+        "senha": "$2b$12$8jD3WxkjexXRjKjfl/57h.srfUf15kfQjYmvrKtmfqs5u7huBfndG",
+        "ativacao": "2025-07-24 15:39:16",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false,
+        "primeiro_login": true
+    },
+    "leidy": {
+        "senha": "$2b$12$fu/vS9FE8Bea840IDtkeBulrSRhbWkDkkt36fgXKN/EqvlUYViWQW",
+        "ativacao": "2025-07-24 15:39:38",
+        "expiracao": "9999-12-31 23:59:59",
+        "email": "israelnetmax@gmail.com",
+        "email_enviado": false,
+        "notificar_cliente": false,
+        "primeiro_login": false
     }
 }

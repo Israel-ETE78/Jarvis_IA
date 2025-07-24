@@ -2,16 +2,17 @@
 
 import streamlit as st
 import os
-import datetime
+import datetime # Importado uma vez aqui, usado como datetime.datetime
 import requests
 import json
 import subprocess
 import time
 import sys
 from dotenv import load_dotenv
+from utils import carregar_chats # Mantido, e usado para carregar chats do GitHub
 
-# pages/2_Status_do_Sistema.py
-import streamlit as st
+# Removendo importação duplicada de streamlit
+# import streamlit as st 
 from auth_admin_pages import require_admin_access # Import the new function
 
 # === IMPORTANT: Apply the admin access check at the very beginning ===
@@ -99,7 +100,8 @@ with col1:
 # The Serper API status display has been removed from this section
 
 st.header("Memória e Conhecimento")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3 = st.columns(3) # Mantém as 3 colunas para o layout
+
 with col1:
     num_memorias = contar_entradas_json("memoria_jarvis.json", 'dict_de_listas')
     st.metric(label="Memórias de Longo Prazo", value=f"{num_memorias} Itens")
@@ -110,9 +112,46 @@ with col2:
     num_prefs = contar_entradas_json(preferencias_path, 'dict')
     st.metric(label="Preferências do Usuário", value=f"{num_prefs} Itens")
 
+# --- INÍCIO DA CORREÇÃO PARA O HISTÓRICO DE CHATS ---
 with col3:
-    tamanho_chats, data_chats = get_metadados_arquivo("chats_historico.json")
-    st.metric(label="Tamanho do Histórico de Chats", value=tamanho_chats, delta=f"Última vez salvo: {data_chats}")
+    username = st.session_state.get("username") # Obtém o nome de usuário logado
+
+    quantidade_chats_display = "0 Itens"
+    ultima_vez_salvo_display = "N/A"
+
+    if username: # Carrega apenas se houver um usuário logado
+        with st.spinner(f"Carregando histórico de chats de {username} do GitHub..."):
+            user_chats = carregar_chats(username) # Usa a função que carrega do GitHub
+
+        if user_chats:
+            total_chats_usuario = len(user_chats)
+            quantidade_chats_display = f"{total_chats_usuario} Chats"
+
+            all_timestamps = []
+            for chat_id, chat_data in user_chats.items():
+                if isinstance(chat_data, dict) and "messages" in chat_data and chat_data["messages"]:
+                    last_message = chat_data["messages"][-1]
+                    if "timestamp" in last_message:
+                        try:
+                            all_timestamps.append(datetime.datetime.fromisoformat(last_message["timestamp"]))
+                        except ValueError:
+                            pass # Ignora timestamps inválidos
+            
+            if all_timestamps:
+                latest_chat_time = max(all_timestamps)
+                ultima_vez_salvo_display = latest_chat_time.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                ultima_vez_salvo_display = "N/A (Nenhum timestamp válido encontrado)"
+        else:
+            quantidade_chats_display = "0 Chats (usuário)"
+            ultima_vez_salvo_display = "N/A"
+    else:
+        quantidade_chats_display = "Usuário não logado"
+        ultima_vez_salvo_display = "N/A"
+    
+    st.metric(label="Tamanho do Histórico de Chats", value=quantidade_chats_display, delta=f"Última vez salvo: {ultima_vez_salvo_display}")
+# --- FIM DA CORREÇÃO PARA O HISTÓRICO DE CHATS ---
+
 
 st.divider()
 
@@ -127,15 +166,20 @@ with col2:
     if st.button("🧠 Iniciar Treinamento Agora"):
         with st.spinner("Executando o script `treinar_memoria.py`... Por favor, aguarde."):
             try:
-                # Uses the absolute path to the script
                 script_path = os.path.join(RAIZ_PROJETO, "treinar_memoria.py")
                 resultado = subprocess.run(
                     [sys.executable, script_path],
-                    capture_output=True, text=True, check=True, encoding='utf-8', cwd=RAIZ_PROJETO
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.STDOUT, 
+                    text=True,
+                    check=True,
+                    encoding='utf-8',
+                    errors='ignore',
+                    cwd=RAIZ_PROJETO
                 )
                 st.success("Cérebro local retreinado com sucesso!")
                 with st.expander("Ver output do treinamento"):
-                    st.code(resultado.stdout)
+                    st.code(resultado.stdout) 
                 st.cache_data.clear()
                 time.sleep(2)
                 st.rerun()
@@ -143,7 +187,7 @@ with col2:
             except subprocess.CalledProcessError as e:
                 st.error("Ocorreu um erro ao treinar o cérebro.")
                 with st.expander("Ver detalhes do erro"):
-                    st.code(e.stderr)
+                    st.code(e.stdout)
             except FileNotFoundError:
                 st.error("Não foi possível encontrar o script 'treinar_memoria.py'. Verifique o caminho.")
 
