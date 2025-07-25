@@ -1344,30 +1344,31 @@ with st.sidebar:
             col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
 
             with col1:
-                # <--- MODIFICADO: Uso de on_click para estabilidade
-                st.button(chat_data["title"], key=f"chat_{id}",
+                # CORREÇÃO 1 (Já feita por você): Botão de exibição
+                st.button(chat_data.get("title", "Chat sem título"), key=f"chat_{id}",
                              use_container_width=True,
                              type="primary" if chat_selected else "secondary",
                              on_click=switch_chat,
                              args=(id,))
             with col2:
                 with st.popover("✏️", use_container_width=True):
+                    # CORREÇÃO 2: Campo de texto para renomear
                     new_title = st.text_input(
-                        "Novo título:", value=chat_data["title"], key=f"rename_input_{id}")
+                        "Novo título:", value=chat_data.get("title", ""), key=f"rename_input_{id}")
                     if st.button("Salvar", key=f"save_rename_{id}"):
                         st.session_state.chats[id]["title"] = new_title
                         salvar_chats(st.session_state["username"])
-                        st.rerun() # Rerun aqui é seguro dentro de um popover/form
+                        st.rerun() 
             with col3:
                 with st.popover("🗑️", use_container_width=True):
+                    # CORREÇÃO 3: Mensagem de confirmação de exclusão
                     st.write(
-                        f"Tem certeza que deseja excluir **{chat_data['title']}**?")
-                    # <--- MODIFICADO: Uso de on_click para estabilidade
+                        f"Tem certeza que deseja excluir **{chat_data.get('title', 'este chat')}**?")
+                    
                     st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}",
-                              on_click=delete_chat,
-                              args=(id,))
+                                  on_click=delete_chat,
+                                  args=(id,))
 
-        # <--- MODIFICADO: Uso de on_click para estabilidade
         st.button("🚪 Sair", use_container_width=True, type="secondary", on_click=fazer_logout)
     st.divider()
 
