@@ -1512,7 +1512,8 @@ for i, mensagem in enumerate(active_chat["messages"]):
                     label="📥 Baixar Imagem",
                     data=image_bytes,
                     file_name="imagem_gerada_jarvis.png",
-                    mime="image/png"
+                    mime="image/png",
+                    key=f"download_img_{i}"  
                 )
             except Exception as e:
                 st.warning(f"Não foi possível gerar o botão de download: {e}")
