@@ -647,6 +647,11 @@ def salvar_chats(username):
 
     chats_para_salvar = copy.deepcopy(st.session_state.chats)
 
+    
+    for chat_id, chat_data in chats_para_salvar.items():
+        if "title" not in chat_data:
+            chat_data["title"] = "Chat sem título"
+
     for chat_id, chat_data in chats_para_salvar.items():
         if "dataframe" in chat_data:
             del chat_data["dataframe"]
@@ -667,6 +672,7 @@ def salvar_chats(username):
         print(f"Chats de '{username}' salvos no GitHub.")
     except Exception as e:
         print(f"Erro ao salvar chats no GitHub: {e}")
+
 
 
 def escolher_resposta_por_contexto(entry):
@@ -839,6 +845,9 @@ def analisar_imagem(image_file):
 def processar_entrada_usuario(prompt_usuario, metadados=None):
     chat_id = st.session_state.current_chat_id
     active_chat = st.session_state.chats[chat_id]
+    active_chat = padronizar_chat(active_chat)
+    st.session_state.chats[chat_id] = active_chat
+
     
     if metadados is None:
         metadados = {}
@@ -896,7 +905,8 @@ def processar_entrada_usuario(prompt_usuario, metadados=None):
         "origem": dict_resposta["origem"]
     })
 
-    if len(active_chat["messages"]) == 2 and active_chat["title"] == "Novo Chat":
+    if len(active_chat["messages"]) == 2 and active_chat.get("title", "") == "Novo Chat":
+
         with st.spinner("Criando título para o chat..."):
             novo_titulo = gerar_titulo_conversa_com_ia(active_chat["messages"])
             active_chat["title"] = novo_titulo
@@ -1205,7 +1215,6 @@ memoria = carregar_memoria()
 
 
 def create_new_chat():
-    """Cria um novo chat com todos os campos necessários."""
     chat_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     st.session_state.chats[chat_id] = {
         "title": "Novo Chat",
@@ -1217,6 +1226,7 @@ def create_new_chat():
         "ultima_mensagem_falada": None
     }
     st.session_state.current_chat_id = chat_id
+
     # st.rerun() não é necessário aqui, pois o on_click do botão já fará isso.
 
 def switch_chat(chat_id):
@@ -1245,15 +1255,22 @@ def fazer_logout():
 
 # --- INICIALIZAÇÃO E SIDEBAR ---
 if "chats" not in st.session_state:
-    st.session_state.chats = carregar_chats(st.session_state["username"])
-    if not st.session_state.chats:
-        create_new_chat()
-    if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
-        st.session_state.current_chat_id = list(
-            st.session_state.chats.keys())[-1]
+    raw_chats = carregar_chats(st.session_state["username"])
+    st.session_state.chats = {
+        chat_id: padronizar_chat(chat_data)
+        for chat_id, chat_data in raw_chats.items()
+    }
+
+if not st.session_state.chats:
+    create_new_chat()
+
+if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
+    st.session_state.current_chat_id = list(st.session_state.chats.keys())[-1]
 
 chat_id = st.session_state.current_chat_id
-active_chat = st.session_state.chats[chat_id]
+active_chat = padronizar_chat(st.session_state.chats[chat_id])
+st.session_state.chats[chat_id] = active_chat
+
 
 
 def img_to_base64(path):
@@ -1467,7 +1484,8 @@ with st.expander("📂 Anexar Arquivos"):
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---
-st.write(f"### {active_chat['title']}")
+st.write(f"### {active_chat.get('title', 'Chat sem título')}")
+
 
 for i, mensagem in enumerate(active_chat["messages"]):
     with st.chat_message(mensagem["role"]):
