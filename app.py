@@ -799,8 +799,10 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
                 print(f"Não foi possível obter a última emoção: {e}")
 
 
+                username = st.session_state.get("username", "usuário")
         if preferencias:
-            prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, Israel: {json.dumps(preferencias, ensure_ascii=False)}"
+            prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, {username}: {json.dumps(preferencias, ensure_ascii=False)}"
+
         if resumo_contexto:
             prompt_sistema += f"\nLembre-se também do contexto da conversa atual: {resumo_contexto}"
 
