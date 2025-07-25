@@ -110,7 +110,7 @@ def check_password(): #
     if st.session_state.get("must_change_password", False): #
         return handle_password_change() #
 
-    st.title("Login - Jarvis IA") #
+    st.title(" 🔒 Login - Jarvis IA") #
     with st.form("login_form"): #
         username = st.text_input("Usuário", key="login_username_input") #
         password = st.text_input("Senha", type="password", key="login_password_input") #
