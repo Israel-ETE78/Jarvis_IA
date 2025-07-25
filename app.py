@@ -1212,6 +1212,16 @@ st.markdown("""<style>.stApp { background-color: #0d1117; color: #c9d1d9; } .stT
 memoria = carregar_memoria()
 
 # --- GESTÃO DE CHATS ---
+def padronizar_chat(chat):
+    return {
+        "title": chat.get("title", "Novo Chat"),
+        "messages": chat.get("messages", []),
+        "contexto_arquivo": chat.get("contexto_arquivo"),
+        "processed_file_name": chat.get("processed_file_name"),
+        "dataframe": chat.get("dataframe"),
+        "resumo_curto_prazo": chat.get("resumo_curto_prazo", ""),
+        "ultima_mensagem_falada": chat.get("ultima_mensagem_falada")
+    }
 
 
 def create_new_chat():
