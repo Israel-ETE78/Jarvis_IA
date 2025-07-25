@@ -313,9 +313,9 @@ def criar_pdf(texto_corpo, titulo_documento):
                            new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3) 
         # --- FIM DA ADIÇÃO ---
-        elif linha.startswith('**') and linha.endswith('**') and linha.count('**') == 2:
+        elif re.match(r'^\*\*(.+?)\*\*$', linha): 
             pdf.set_font(FONT_FAMILY, 'B', 12)
-            texto_negrito = linha[2:-2].strip() 
+            texto_negrito = re.sub(r'^\*\*(.+?)\*\*$', r'\1', linha)
             pdf.multi_cell(0, 7, texto_negrito,
                         new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3)
