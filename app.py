@@ -313,11 +313,11 @@ def criar_pdf(texto_corpo, titulo_documento):
                            new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3) 
         # --- FIM DA ADIÇÃO ---
-        elif linha.startswith('**') and linha.endswith('**'):
+        elif linha.startswith('**') and linha.endswith('**') and linha.count('**') == 2:
             pdf.set_font(FONT_FAMILY, 'B', 12)
-            texto_negrito = linha.strip('**')
+            texto_negrito = linha[2:-2].strip() 
             pdf.multi_cell(0, 7, texto_negrito,
-                           new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3)
         elif linha.startswith('* ') or linha.startswith('- '):
             pdf.set_font(FONT_FAMILY, '', 12)
