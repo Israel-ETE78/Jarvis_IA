@@ -1682,8 +1682,8 @@ def processar_comandos(prompt_usuario, active_chat):
         if not active_chat.get("contexto_arquivo"):
             st.warning("Para usar este comando, por favor, carregue um arquivo de código primeiro.")
             active_chat["messages"].append({"role": "assistant", "type": "text", "content": "Para usar este comando, por favor, carregue um arquivo de código primeiro."})
-            # Opcional: Adicionar st.rerun() aqui para o aviso aparecer imediatamente
-            # st.rerun() 
+            
+            st.rerun() 
             return True 
 
         comando = prompt_lower.split(' ')[0] # /explicar, /refatorar, etc.
