@@ -48,12 +48,35 @@ st.info("""
 * **Exemplo:** `/lembrese meu time de futebol é o Sport Club do Recife`
 """)
 
+st.info("""
+**`/gerar_codigo [descrição]`**
+* **O que faz:** Gera um snippet de código com base na descrição fornecida.
+* **Exemplo:** `/gerar_codigo função Python para calcular fatorial`
+""")
+
+st.info("""
+**`/explicar [código]`**
+* **O que faz:** Fornece uma explicação detalhada do código fornecido.
+* **Exemplo:** `/explicar código para ordenar uma lista em Python`
+""")
+
+st.info("""
+**`/refatorar [código]`**
+* **O que faz:** Sugere melhorias e otimizações para o código fornecido.
+* **Exemplo:** `/refatorar função que calcula a soma de uma lista`
+""")
+
+st.info("""
+**`/depurar [código]`**
+* **O que faz:** Ajuda a identificar e corrigir erros no código fornecido.
+* **Exemplo:** `/depurar script que gera relatório em PDF`
+""")
 # --- Seção de Perguntas Frequentes ---
 st.header("❔ Perguntas Frequentes (FAQ)")
 
 with st.expander("Como funciona a Análise de Dados?"):
     st.markdown("""
-    1.  Na `sidebar`, em "Anexar Arquivos", carregue um arquivo `.csv` ou `.xlsx`.
+    1.  No chat em "Anexar Arquivos", carregue um arquivo `.csv` , `.xlsx` `etc..`
     2.  O Jarvis entrará automaticamente no "Modo de Análise de Dados".
     3.  Você pode então fazer perguntas em linguagem natural sobre os dados (ex: "qual a média de idade?") ou usar o comando `/raiox` para um resumo completo.
     4.  Para sair do modo, clique no botão "Sair do Modo de Análise" ou inicie um novo chat.

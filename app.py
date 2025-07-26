@@ -884,15 +884,37 @@ def processar_entrada_usuario(prompt_usuario, metadados=None):
     contexto_do_arquivo = active_chat.get("contexto_arquivo")
 
     if contexto_do_arquivo:
-        historico_para_analise = [
-            {"role": "system", "content": "Você é um assistente especialista em análise de dados e documentos. Responda às perguntas do usuário baseando-se ESTRITAMENTE no conteúdo do documento fornecido abaixo."},
-            {"role": "user", "content": f"CONTEÚDO DO DOCUMENTO PARA ANÁLISE:\n---\n{contexto_do_arquivo}\n---"},
-            {"role": "assistant", "content": "Entendido. O conteúdo do documento foi carregado. Estou pronto para responder suas perguntas sobre ele."}
-        ]
+        tipos_de_codigo = ('.py', '.js', '.ts', '.html', '.htm', '.css', '.php', '.java', '.kt', '.c', '.cpp', '.h', '.cs', '.rb', '.go', '.swift', '.sql', '.json', '.xml', '.yaml', '.yml', '.md', '.sh', '.bat', '.ps1', '.R', '.pl', '.lua')
+        nome_arquivo = active_chat.get("processed_file_name", "").lower()
+
+        if nome_arquivo.endswith(tipos_de_codigo):
+            # MODO PROGRAMAÇÃO (CORRETO)
+            prompt_sistema_programacao = """
+            Você é Jarvis, um programador expert e assistente de código sênior.
+            Sua tarefa é analisar, refatorar, depurar e criar código com base no contexto fornecido e nas solicitações do usuário.
+            Responda sempre de forma clara, fornecendo o código em blocos formatados (ex: ```python ... ```) e explicando suas sugestões.
+            Seja preciso, eficiente e siga as melhores práticas de programação.
+            """
+            historico_para_analise = [
+                {"role": "system", "content": prompt_sistema_programacao},
+                {"role": "user", "content": f"O seguinte arquivo de código está em contexto para nossa conversa:\n`{nome_arquivo}`\n\nCONTEÚDO DO ARQUIVO:\n---\n{contexto_do_arquivo}\n---"},
+                {"role": "assistant", "content": f"Entendido. O arquivo `{nome_arquivo}` foi carregado. Estou pronto para ajudar com o código."}
+            ]
+        else:
+            # MODO DOCUMENTO/DADOS (CORRETO)
+            historico_para_analise = [
+                {"role": "system", "content": "Você é um assistente especialista em análise de dados e documentos. Responda às perguntas do usuário baseando-se ESTRITAMENTE no conteúdo do documento fornecido abaixo."},
+                {"role": "user", "content": f"CONTEÚDO DO DOCUMENTO PARA ANÁLISE:\n---\n{contexto_do_arquivo}\n---"},
+                {"role": "assistant", "content": "Entendido. O conteúdo do documento foi carregado. Estou pronto para responder suas perguntas sobre ele."}
+            ]
+
+        # Agora, esta linha usa o histórico que foi definido corretamente acima
         historico_para_analise.extend(historico_chat)
         historico_final = historico_para_analise
     else:
         historico_final = historico_chat
+
+
 
     # <--- MODIFICADO: Passa o tom do usuário (dos metadados) para a função de resposta.
     tom_do_usuario = metadados.get("sentimento_usuario")
@@ -1627,7 +1649,75 @@ def processar_comandos(prompt_usuario, active_chat):
             salvar_chats(st.session_state["username"])
             st.rerun()
         return True
+    
+    elif prompt_lower.startswith("/gerar_codigo "):
+        descricao_codigo = prompt_usuario[14:].strip()
+        if descricao_codigo:
+            with st.chat_message("assistant"):
+                with st.spinner(f"Gerando código para: '{descricao_codigo}'..."):
+                    prompt_para_ia = f"""
+                    Gere um script Python completo e funcional com base na seguinte descrição.
+                    O código deve ser bem comentado, seguir as melhores práticas (PEP 8) e estar contido em um único bloco de código.
+                    Descrição: "{descricao_codigo}"
 
+                    Responda APENAS com o bloco de código Python formatado em markdown.
+                    Exemplo de Resposta:
+                    ```python
+                    # seu código aqui
+                    ```
+                    """
+                    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+                    resposta_modelo = modelo.chat.completions.create(
+                        model=modelo_selecionado,
+                        messages=[{"role": "user", "content": prompt_para_ia}],
+                        temperature=0.1,
+                    )
+                    codigo_gerado = resposta_modelo.choices[0].message.content
+                    active_chat["messages"].append({"role": "assistant", "type": "text", "content": codigo_gerado})
+                    salvar_chats(st.session_state["username"])
+            st.rerun()
+        return True
+
+    elif prompt_lower.startswith(("/explicar", "/refatorar", "/depurar")):
+        if not active_chat.get("contexto_arquivo"):
+            st.warning("Para usar este comando, por favor, carregue um arquivo de código primeiro.")
+            active_chat["messages"].append({"role": "assistant", "type": "text", "content": "Para usar este comando, por favor, carregue um arquivo de código primeiro."})
+            # Opcional: Adicionar st.rerun() aqui para o aviso aparecer imediatamente
+            # st.rerun() 
+            return True 
+
+        comando = prompt_lower.split(' ')[0] # /explicar, /refatorar, etc.
+        instrucao_adicional = prompt_usuario[len(comando):].strip()
+        nome_arquivo = active_chat.get("processed_file_name", "o arquivo atual")
+
+        with st.chat_message("assistant"):
+            with st.spinner(f"Processando '{comando}' no arquivo `{nome_arquivo}`..."):
+                prompt_para_ia = f"""
+                Você é um programador expert. Sua tarefa é executar a ação '{comando}' no código-fonte fornecido.
+
+                Arquivo em análise: `{nome_arquivo}`
+                Instruções adicionais do usuário: "{instrucao_adicional if instrucao_adicional else 'Nenhuma'}"
+
+                Responda de forma clara, com explicações detalhadas e, se aplicável, forneça o bloco de código modificado ou sugerido.
+
+                CÓDIGO-FONTE PARA ANÁLISE:
+                ---
+                {active_chat.get("contexto_arquivo")}
+                ---
+                """
+                modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+                resposta_modelo = modelo.chat.completions.create(
+                    model=modelo_selecionado,
+                    messages=[{"role": "user", "content": prompt_para_ia}],
+                    temperature=0.2,
+                )
+                resposta_analise = resposta_modelo.choices[0].message.content
+                active_chat["messages"].append({"role": "assistant", "type": "text", "content": resposta_analise})
+                salvar_chats(st.session_state["username"])
+        st.rerun()
+        return True
+
+    
     elif prompt_lower == "/raiox":
         if active_chat.get("dataframe") is not None:
             df = active_chat.get("dataframe")
@@ -1647,11 +1737,11 @@ def processar_comandos(prompt_usuario, active_chat):
             st.warning("Para usar o comando /raiox, por favor, carregue um arquivo de dados primeiro.")
         return True
     
-    return False # Nenhum comando foi processado
+    return False
 
 
 # --- ENTRADA DE TEXTO DO USUÁRIO (BLOCO REATORADO) ---
-if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox..."):
+if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox, /gerar_codigo, /explicar, /refatorar, /depurar..."):
     # Adiciona a mensagem do usuário ao histórico imediatamente
     active_chat["messages"].append(
         {"role": "user", "type": "text", "content": prompt_usuario})
