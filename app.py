@@ -1091,7 +1091,8 @@ def buscar_na_internet(pergunta_usuario):
     if not api_key_serper:
         return "ERRO: A chave da API Serper não foi configurada."
 
-    url = "[https://google.serper.dev/search](https://google.serper.dev/search)"
+    url = "https://google.serper.dev/search"
+
     payload = json.dumps({"q": pergunta_usuario, "gl": "br", "hl": "pt-br"})
     headers = {'X-API-KEY': api_key_serper, 'Content-Type': 'application/json'}
 
