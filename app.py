@@ -1742,7 +1742,7 @@ def processar_comandos(prompt_usuario, active_chat):
 
 
 # --- ENTRADA DE TEXTO DO USUÁRIO (BLOCO REATORADO) ---
-if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox, /gerar_codigo, /explicar, /refatorar, /depurar..."):
+if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine, /pdf, /raiox..."):
     # Adiciona a mensagem do usuário ao histórico imediatamente
     active_chat["messages"].append(
         {"role": "user", "type": "text", "content": prompt_usuario})
