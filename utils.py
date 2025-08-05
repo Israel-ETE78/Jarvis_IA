@@ -362,3 +362,25 @@ def salvar_chats(username):
     else:
         print(f"ERRO: Falha ao salvar chats de {username}.")
         return False
+    
+    # --- FUNÇÕES DE ANOTAÇÕES ---
+
+def salvar_anotacoes(anotacoes_dict, username):
+    """
+    Salva o dicionário de anotações do usuário no GitHub (criptografado).
+    """
+    caminho = f"anotacoes/anotacoes_{username}.json"
+    mensagem_commit = f"Atualiza anotações do usuario {username}"
+    # Garante que o diretório exista no repositório (o GitHub cria se não existir)
+    # A função _save_json_to_github já lida com a criação do arquivo.
+    return _save_json_to_github(caminho, anotacoes_dict, mensagem_commit)
+
+
+def carregar_anotacoes(username):
+    """
+    Carrega as anotações do usuário a partir de um arquivo JSON no GitHub.
+    Retorna um dicionário vazio se o arquivo não existir.
+    """
+    caminho = f"anotacoes/anotacoes_{username}.json"
+    anotacoes_carregadas = _load_encrypted_json_from_github(caminho)
+    return anotacoes_carregadas if anotacoes_carregadas is not None else {}

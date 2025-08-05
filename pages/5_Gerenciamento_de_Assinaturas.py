@@ -188,11 +188,13 @@ if assinaturas:
                             preferences_path = f"preferencias/prefs_{user}.json"
                             emocoes_path = f"dados/emocoes_{user}.json"
                             reflexoes_path = f"reflexoes/reflexoes_{user}.json"
+                            anotacoes_path = f"anotacoes/anotacoes_{user}.json"
 
                             excluir_arquivo_do_github(chat_path, f"Admin excluiu chat de {user}")
                             excluir_arquivo_do_github(preferences_path, f"Admin excluiu preferencias de {user}")
                             excluir_arquivo_do_github(emocoes_path, f"Admin excluiu emoções de {user}")
                             excluir_arquivo_do_github(reflexoes_path, f"Admin excluiu reflexões de {user}")
+                            excluir_arquivo_do_github(anotacoes_path, f"Admin excluiu anotações de {user}")
                             st.info(f"Todos os dados no GitHub de '{user}' foram solicitados para exclusão.")
 
                             # --- REMOVER ARQUIVOS LOCAIS (extra segurança) ---
@@ -200,7 +202,8 @@ if assinaturas:
                                 chat_path,
                                 preferences_path,
                                 emocoes_path,
-                                reflexoes_path
+                                reflexoes_path,
+                                anotacoes_path
                             ]
                             for caminho in arquivos_locais:
                                 if os.path.exists(caminho):

@@ -1333,6 +1333,8 @@ with st.sidebar:
     st.sidebar.header("Painel do Usuário")
     st.sidebar.page_link("pages/3_Gerenciar_Preferencias.py",
                          label="Minhas Preferências", icon="⚙️")
+    st.sidebar.page_link("pages/8_Anotacoes.py",
+                         label="Minhas Anotações", icon="🗒️")
     st.sidebar.page_link("pages/7_emocoes.py",
                          label="Gerenciar Emoções", icon="🧠")
     st.sidebar.page_link("pages/4_Suporte_e_Ajuda.py",
