@@ -3,6 +3,7 @@
 import streamlit as st
 import os
 import json
+import boto3
 import re
 from dotenv import load_dotenv
 from pathlib import Path
@@ -384,3 +385,44 @@ def carregar_anotacoes(username):
     caminho = f"anotacoes/anotacoes_{username}.json"
     anotacoes_carregadas = _load_encrypted_json_from_github(caminho)
     return anotacoes_carregadas if anotacoes_carregadas is not None else {}
+
+def analisar_imagem_com_rekognition(image_bytes, tipo_analise="labels"):
+    """
+    Analisa uma imagem usando o Amazon Rekognition de forma segura.
+    Esta função agora vive em utils.py para melhor organização.
+    Retorna um dicionário com a resposta ou None em caso de erro.
+    """
+    try:
+        # Carrega as credenciais de forma segura, como você já faz
+        aws_access_key = st.secrets.get("AWS_ACCESS_KEY_ID") or os.getenv("AWS_ACCESS_KEY_ID")
+        aws_secret_key = st.secrets.get("AWS_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_ACCESS_KEY")
+        
+        if not aws_access_key or not aws_secret_key:
+            st.error("As credenciais da AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) não estão configuradas nos Secrets.")
+            return None
+
+        # Conecta-se ao serviço Rekognition
+        rekognition_client = boto3.client(
+            'rekognition',
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
+            region_name='us-east-1'  # Mude se necessário
+        )
+
+        st.info(f"🔎 Analisando imagem com Amazon Rekognition (modo: {tipo_analise})...")
+
+        # Chama a API correta baseada no tipo de análise solicitado
+        if tipo_analise == "labels":
+            response = rekognition_client.detect_labels(Image={'Bytes': image_bytes}, MaxLabels=15, MinConfidence=80)
+        elif tipo_analise == "faces":
+            response = rekognition_client.detect_faces(Image={'Bytes': image_bytes}, Attributes=['ALL'])
+        elif tipo_analise == "text":
+            response = rekognition_client.detect_text(Image={'Bytes': image_bytes})
+        else:
+            return {"error": "Tipo de análise não suportado."}
+        
+        return response
+
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao conectar com o Amazon Rekognition: {e}")
+        return None

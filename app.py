@@ -18,16 +18,15 @@ import base64
 import pandas as pd
 import plotly.express as px
 from fpdf import FPDF
-from auth import check_password  # Sua autenticação local
+from auth import check_password
 from utils import carregar_preferencias, salvar_preferencias
+from utils import carregar_preferencias, salvar_preferencias, analisar_imagem_com_rekognition
 import joblib
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import requests
 import io
-# As bibliotecas librosa, io (se usado apenas para áudio), soundfile, PyAudio foram removidas
-# do contexto do microfone e processamento de áudio em tempo real.
 from fpdf.enums import XPos, YPos
 from openai import RateLimitError
 import time
@@ -64,19 +63,20 @@ if st.session_state.get("username") != ADMIN_USERNAME:
 else:
     st.session_state["show_feedback_form"] = True
 
-emocoes_dict = {} # Inicializa como dicionário vazio para evitar erros caso não carregue
+emocoes_dict = {}  # Inicializa como dicionário vazio para evitar erros caso não carregue
 ultima_emocao = None
 if st.session_state.username:
     emocoes_dict_carregadas = carregar_emocoes(st.session_state.username)
     if emocoes_dict_carregadas:
         emocoes_dict = emocoes_dict_carregadas
         try:
-            latest_timestamp = max(emocoes_dict.keys(), key=lambda k: datetime.fromisoformat(k))
+            latest_timestamp = max(emocoes_dict.keys(),
+                                   key=lambda k: datetime.fromisoformat(k))
             latest_entry = emocoes_dict[latest_timestamp]
             # --- INÍCIO DA MODIFICAÇÃO NECESSÁRIA ---
             if isinstance(latest_entry, dict):
                 ultima_emocao = latest_entry.get("emocao", "neutro").lower()
-            else: # Formato antigo (apenas string)
+            else:  # Formato antigo (apenas string)
                 ultima_emocao = str(latest_entry).lower()
             # --- FIM DA MODIFICAÇÃO NECESSÁRIA ---
         except Exception as e:
@@ -112,7 +112,7 @@ if not api_key:
 modelo = OpenAI(api_key=api_key)
 
 
-def chamar_openai_com_retries(modelo_openai, mensagens, modelo="gpt-4o", max_tentativas=3, pausa_segundos=5):
+def chamar_openai_com_retries(modelo_openai, mensagens, modelo="gpt-5-nano", max_tentativas=3, pausa_segundos=5):
     """
     Faz a chamada à API da OpenAI com tentativas automáticas em caso de RateLimitError.
     """
@@ -196,6 +196,8 @@ else:
 # --- Funções do Aplicativo ---
 
 # <--- FUNÇÃO OTIMIZADA: Substitui detectar_emocao, detectar_tom_usuario e classificar_categoria
+
+
 def analisar_metadados_prompt(prompt_usuario):
     """
     Analisa o prompt do usuário com uma única chamada à IA para extrair múltiplos metadados.
@@ -220,11 +222,10 @@ def analisar_metadados_prompt(prompt_usuario):
     """
     try:
         # Usa um modelo mais rápido e barato para esta tarefa de classificação simples
-        modelo_selecionado = 'gpt-3.5-turbo'
+        modelo_selecionado = 'gpt-5-nano'
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
-            messages=[{"role": "user", "content": prompt_analise}],
-            temperature=0,
+            messages=[{"role": "user", "content": prompt_analise}],            
             response_format={"type": "json_object"}
         )
         return json.loads(resposta_modelo.choices[0].message.content)
@@ -244,19 +245,23 @@ def limpar_pdf_da_memoria():
     if 'pdf_filename' in st.session_state:
         del st.session_state['pdf_filename']
 
-# <--- REMOVIDO: A segunda definição duplicada de limpar_pdf_da_memoria foi apagada.
+
 
 def gerar_conteudo_para_pdf(topico):
     """Usa a IA para gerar um texto bem formatado sobre um tópico para o PDF."""
     prompt = f"Por favor, escreva um texto detalhado e bem estruturado sobre o seguinte tópico para ser incluído em um documento PDF. Organize com parágrafos claros e, se apropriado, use listas. Tópico: '{topico}'"
-    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
-    resposta_modelo = modelo.chat.completions.create(
-        model=modelo_selecionado,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=2048
-    )
-    return resposta_modelo.choices[0].message.content
+    
+    try:
+        modelo_selecionado = 'gpt-5-mini'
+        resposta_modelo = modelo.chat.completions.create(
+            model=modelo_selecionado,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=2048
+        )
+        return resposta_modelo.choices[0].message.content
+    except Exception as e:
+        st.error(f"Erro ao gerar conteúdo para o PDF: {e}")
+        return "" 
 
 
 def criar_pdf(texto_corpo, titulo_documento):
@@ -276,7 +281,7 @@ def criar_pdf(texto_corpo, titulo_documento):
         pdf.add_font('DejaVu', '', font_path_regular)
         pdf.add_font('DejaVu', 'B', font_path_bold)
         FONT_FAMILY = 'DejaVu'
-    except Exception: 
+    except Exception:
         print("AVISO: Arquivos de fonte não encontrados. Verifique a pasta 'assets'. Usando Helvetica.")
         FONT_FAMILY = 'Helvetica'
 
@@ -307,27 +312,27 @@ def criar_pdf(texto_corpo, titulo_documento):
                            new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(8)
         # --- ADIÇÃO PARA CABEÇALHO H4 (####) ---
-        elif linha.startswith('#### '): 
-            pdf.set_font(FONT_FAMILY, 'B', 12) 
+        elif linha.startswith('#### '):
+            pdf.set_font(FONT_FAMILY, 'B', 12)
             pdf.multi_cell(0, 7, linha.lstrip('#### ').strip(),
                            new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            pdf.ln(3) 
+            pdf.ln(3)
         # --- FIM DA ADIÇÃO ---
-        elif re.match(r'^\*\*(.+?)\*\*$', linha): 
+        elif re.match(r'^\*\*(.+?)\*\*$', linha):
             pdf.set_font(FONT_FAMILY, 'B', 12)
             texto_negrito = re.sub(r'^\*\*(.+?)\*\*$', r'\1', linha)
             pdf.multi_cell(0, 7, texto_negrito,
-                        new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                           new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(3)
         elif linha.startswith('* ') or linha.startswith('- '):
             pdf.set_font(FONT_FAMILY, '', 12)
             bullet = "•" if FONT_FAMILY == 'DejaVu' else "*"
             pdf.cell(8, 7, f"  {bullet} ")
-            texto_da_linha = linha.lstrip('* ').lstrip('- ').strip()            
+            texto_da_linha = linha.lstrip('* ').lstrip('- ').strip()
             write_with_mixed_styles(texto_da_linha, pdf, FONT_FAMILY)
             pdf.ln(2)
         elif linha:
-            pdf.set_font(FONT_FAMILY, '', 12)            
+            pdf.set_font(FONT_FAMILY, '', 12)
             write_with_mixed_styles(linha, pdf, FONT_FAMILY)
             pdf.ln(5)
 
@@ -387,6 +392,7 @@ def extrair_texto_documento(uploaded_file):
     # --- FIM da modificação ---
     return "Formato de arquivo não suportado."
 
+
 def gerar_imagem_com_dalle(prompt_para_imagem):
     """
     Gera uma imagem com DALL-E 3 e retorna seus dados em formato Base64.
@@ -424,6 +430,7 @@ def gerar_imagem_com_dalle(prompt_para_imagem):
 
 # <--- REMOVIDAS: As funções `classificar_categoria`, `detectar_tom_emocional`, e `detectar_tom_usuario` foram substituídas pela nova `analisar_metadados_prompt`.
 
+
 def detectar_idioma_com_ia(texto_usuario):
     """Usa a própria OpenAI para detectar o idioma, um método mais preciso."""
     if not texto_usuario.strip():
@@ -432,13 +439,12 @@ def detectar_idioma_com_ia(texto_usuario):
     try:
         prompt = f"Qual o código de idioma ISO 639-1 (ex: 'en', 'pt', 'es') do seguinte texto? Responda APENAS com o código de duas letras.\n\nTexto: \"{texto_usuario}\""
 
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-5-nano')
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=5,  # Super curto e rápido
-            temperature=0
+            max_completion_tokens=5,  # Super curto e rápido
+            
         )
         idioma = resposta_modelo.choices[0].message.content.strip().lower()
 
@@ -500,6 +506,7 @@ def preparar_texto_para_fala(texto):
 
     return texto
 
+
 def carregar_memoria():
     try:
         with open("memoria_jarvis.json", "r", encoding="utf-8") as f:
@@ -512,13 +519,15 @@ def salvar_memoria(memoria):
     with open("memoria_jarvis.json", "w", encoding="utf-8") as f:
         json.dump(memoria, f, ensure_ascii=False, indent=4)
 
+
 def adicionar_a_memoria(pergunta, resposta, modelo_emb):
     """
     Adiciona um novo par de pergunta e resposta à memória dinâmica (vetores em sessão)
     e à memória persistente (arquivo JSON).
     """
     if not modelo_emb:
-        st.error("O modelo de embedding não está carregado. Não é possível salvar na memória.")
+        st.error(
+            "O modelo de embedding não está carregado. Não é possível salvar na memória.")
         return
 
     try:
@@ -535,11 +544,11 @@ def adicionar_a_memoria(pergunta, resposta, modelo_emb):
 
         nova_resposta_formatada = {'texto': resposta, 'tom': 'neutro'}
         if 'base_de_conhecimento' in st.session_state and st.session_state.base_de_conhecimento is not None:
-             st.session_state.base_de_conhecimento['respostas'].append(
+            st.session_state.base_de_conhecimento['respostas'].append(
                 [nova_resposta_formatada])
         else:
-            st.session_state.base_de_conhecimento = {'respostas': [[nova_resposta_formatada]]}
-
+            st.session_state.base_de_conhecimento = {
+                'respostas': [[nova_resposta_formatada]]}
 
         st.toast("✅ Memória dinâmica atualizada para esta sessão!", icon="🧠")
         print(
@@ -548,7 +557,8 @@ def adicionar_a_memoria(pergunta, resposta, modelo_emb):
         # --- ETAPA 2: PERSISTIR A MEMÓRIA NO ARQUIVO JSON ---
         memoria_persistente = carregar_memoria()
         # <--- MODIFICADO: Usa a nova função otimizada para obter a categoria
-        categoria = analisar_metadados_prompt(pergunta).get('categoria', 'geral')
+        categoria = analisar_metadados_prompt(
+            pergunta).get('categoria', 'geral')
 
         nova_entrada = {
             "pergunta": pergunta,
@@ -561,12 +571,14 @@ def adicionar_a_memoria(pergunta, resposta, modelo_emb):
         if not any(item["pergunta"].lower() == pergunta.lower() for item in memoria_persistente[categoria]):
             memoria_persistente[categoria].append(nova_entrada)
             salvar_memoria(memoria_persistente)
-            st.toast("💾 Memória também salva permanentemente no arquivo JSON.", icon="📝")
+            st.toast(
+                "💾 Memória também salva permanentemente no arquivo JSON.", icon="📝")
         else:
             st.toast("Essa pergunta já existe na memória permanente.", icon="💡")
 
     except Exception as e:
         st.error(f"Erro ao atualizar a memória: {e}")
+
 
 def processar_comando_lembrese(texto_do_comando):
     """Usa a OpenAI para extrair um tópico e valor de um texto e salvar nas preferências."""
@@ -584,12 +596,10 @@ def processar_comando_lembrese(texto_do_comando):
     """
 
     try:
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-5-nano')
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
+            messages=[{"role": "user", "content": prompt}],            
             response_format={"type": "json_object"}
         )
 
@@ -647,7 +657,6 @@ def salvar_chats(username):
 
     chats_para_salvar = copy.deepcopy(st.session_state.chats)
 
-    
     for chat_id, chat_data in chats_para_salvar.items():
         if "title" not in chat_data:
             chat_data["title"] = "Chat sem título"
@@ -674,7 +683,6 @@ def salvar_chats(username):
         print(f"Erro ao salvar chats no GitHub: {e}")
 
 
-
 def escolher_resposta_por_contexto(entry):
     if entry["respostas"]:
         return random.choice(entry["respostas"])["texto"]
@@ -694,6 +702,7 @@ def buscar_resposta_local(pergunta_usuario, memoria, limiar=0.9):
         return escolher_resposta_por_contexto(melhor_match)
     return None
 
+
 def adaptar_estilo_com_base_na_emocao(ultima_emocao):
     if not ultima_emocao:
         return ""
@@ -707,6 +716,7 @@ def adaptar_estilo_com_base_na_emocao(ultima_emocao):
         return "Use um tom tranquilizador. Dê respostas claras e objetivas para reduzir a ansiedade."
     else:
         return "Use um tom neutro e gentil."
+
 
 def ia_fez_uma_pergunta(mensagem_ia):
     """
@@ -745,7 +755,8 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
 
     if modelo_embedding and st.session_state.get('vetores_perguntas') is not None:
         try:
-            vetor_pergunta_usuario = modelo_embedding.encode([pergunta_usuario])
+            vetor_pergunta_usuario = modelo_embedding.encode(
+                [pergunta_usuario])
             scores_similaridade = cosine_similarity(
                 vetor_pergunta_usuario, st.session_state.vetores_perguntas)
             indice_melhor_match = np.argmax(scores_similaridade)
@@ -768,7 +779,7 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
 
     username = st.session_state.get("username", "default")
     preferencias = carregar_preferencias(username)
-    
+
     # <--- MODIFICADO: Usa o tom já detectado em vez de chamar a API de novo.
     if tom_do_usuario:
         st.sidebar.info(f"Tom detectado: {tom_do_usuario}")
@@ -779,7 +790,28 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
         st.info("Buscando informações em tempo real na web... 🌐")
         contexto_da_web = buscar_na_internet(pergunta_usuario)
 
-        prompt_sistema = f"""{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente prestativo. Sua tarefa é responder à pergunta do usuário de forma clara e direta, baseando-se ESTRITAMENTE nas informações de contexto da web.\n\nINFORMAÇÕES SOBRE SEU USUÁRIO, ISRAEL: {json.dumps(preferencias, ensure_ascii=False)}\nO tom atual do usuário parece ser: {tom_do_usuario}.\n\nContexto da Web:\n{contexto_da_web}"""
+        
+        prompt_sistema = f"""{instrucao_idioma_reforcada}\n\nVocê é Jarvis, um assistente de IA que resume notícias da web.
+
+INSTRUÇÕES CRÍTICAS PARA FORMATAÇÃO:
+1.  Responda com uma breve introdução (ex: "Aqui estão as últimas notícias...").
+2.  Liste as notícias em formato de tópicos (bullet points, usando '*').
+3.  Para cada tópico, escreva a manchete da notícia.
+4.  Imediativamente após a manchete, inclua o link da fonte que já está formatado nos resultados da pesquisa (o 🔗 [Acessar site](URL)). Não adicione a palavra "Fonte".
+
+EXEMPLO DE RESPOSTA PERFEITA:
+"Aqui estão as principais notícias recentes:
+* Manchete da primeira notícia. 🔗 [Acessar site](http://link-da-noticia-1)
+* Manchete da segunda notícia. 🔗 [Acessar site](http://link-da-noticia-2)"
+
+---
+RESULTADOS DA PESQUISA (Use para se basear):
+{contexto_da_web}
+---
+PERGUNTA DO USUÁRIO:
+{pergunta_usuario}
+---
+"""
     else:
         logging.info("Pergunta não requer busca na web, consultando a OpenAI.")
         st.info("🔍 Pesquisando dados...")
@@ -789,19 +821,19 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
         if tom_do_usuario:
             prompt_sistema += f"\nO tom do texto dele parece ser '{tom_do_usuario}'. Adapte seu estilo de resposta a isso."
         if preferencias_emocionais := carregar_emocoes(username):
-            try: # Adicionado try-except para mais robustez
+            try:  # Adicionado try-except para mais robustez
                 ultima_emocao = list(preferencias_emocionais.values())[-1]
                 if isinstance(ultima_emocao, dict):
                     ultima_emocao = ultima_emocao.get("emocao", "neutro")
-                ajuste_de_estilo = adaptar_estilo_com_base_na_emocao(str(ultima_emocao))
+                ajuste_de_estilo = adaptar_estilo_com_base_na_emocao(
+                    str(ultima_emocao))
                 prompt_sistema += f"\nO usuário parece estar se sentindo '{ultima_emocao}' recentemente. {ajuste_de_estilo}"
             except (IndexError, TypeError) as e:
                 print(f"Não foi possível obter a última emoção: {e}")
 
-
-                username = st.session_state.get("username", "usuário")
         if preferencias:
-            prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, {username}: {json.dumps(preferencias, ensure_ascii=False)}"
+            # PROMPT ATUALIZADO PARA RESPOSTA PADRÃO
+            prompt_sistema += f"\nLembre-se destas preferências sobre seu usuário, {username.capitalize()}: {json.dumps(preferencias, ensure_ascii=False)}"
 
         if resumo_contexto:
             prompt_sistema += f"\nLembre-se também do contexto da conversa atual: {resumo_contexto}"
@@ -809,7 +841,7 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
     mensagens_para_api = [{"role": "system", "content": prompt_sistema}]
     mensagens_para_api.extend(historico_chat)
 
-    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-5-nano')
     resposta_modelo = chamar_openai_com_retries(
         modelo_openai=modelo,
         mensagens=mensagens_para_api,
@@ -827,30 +859,36 @@ def responder_com_inteligencia(pergunta_usuario, modelo, historico_chat, memoria
     return {"texto": resposta_ia, "origem": "openai_web" if 'contexto_da_web' in locals() else 'openai'}
 
 
+
 def analisar_imagem(image_file):
     try:
-        st.info("Analisando a imagem com a IA...")
+        
         image_bytes = image_file.getvalue()
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
         image_type = image_file.type
         messages = [{"role": "user", "content": [{"type": "text", "text": "Descreva esta imagem em detalhes. Se for um diagrama ou texto, extraia as informações de forma estruturada."}, {
             "type": "image_url", "image_url": {"url": f"data:{image_type};base64,{base64_image}"}}]}]
+        
+        modelo_selecionado = 'gpt-4o' 
+        
         resposta_modelo = modelo.chat.completions.create(
-            model="gpt-4o", messages=messages, max_tokens=1024)
-        st.success("Análise da imagem concluída!")
+            model=modelo_selecionado,
+            messages=messages, 
+            max_completion_tokens=1024
+        )
+        
         return resposta_modelo.choices[0].message.content
     except Exception as e:
         st.error(f"Ocorreu um erro ao analisar a imagem: {e}")
-        return "Não foi possível analisar a imagem."
+        return "" # Retorna uma string vazia em caso de erro
 
-# <--- MODIFICADO: Função agora aceita `metadados` para passar o tom do usuário adiante.
+
 def processar_entrada_usuario(prompt_usuario, metadados=None):
     chat_id = st.session_state.current_chat_id
     active_chat = st.session_state.chats[chat_id]
     active_chat = padronizar_chat(active_chat)
     st.session_state.chats[chat_id] = active_chat
 
-    
     if metadados is None:
         metadados = {}
 
@@ -884,11 +922,26 @@ def processar_entrada_usuario(prompt_usuario, metadados=None):
     contexto_do_arquivo = active_chat.get("contexto_arquivo")
 
     if contexto_do_arquivo:
-        tipos_de_codigo = ('.py', '.js', '.ts', '.html', '.htm', '.css', '.php', '.java', '.kt', '.c', '.cpp', '.h', '.cs', '.rb', '.go', '.swift', '.sql', '.json', '.xml', '.yaml', '.yml', '.md', '.sh', '.bat', '.ps1', '.R', '.pl', '.lua')
-        nome_arquivo = active_chat.get("processed_file_name", "").lower()
+        tipos_de_codigo = ('.py', '.js', '.ts', '.html', '.htm', '.css', '.php', '.java', '.kt', '.c', '.cpp', '.h', '.cs',
+                           '.rb', '.go', '.swift', '.sql', '.json', '.xml', '.yaml', '.yml', '.md', '.sh', '.bat', '.ps1', '.R', '.pl', '.lua')
 
-        if nome_arquivo.endswith(tipos_de_codigo):
-            # MODO PROGRAMAÇÃO (CORRETO)
+        # 1. Obter a LISTA de nomes de arquivos da chave correta (plural).
+        lista_nomes_arquivos = active_chat.get("processed_file_names", [])
+
+        # 2. Verificar se ALGUM arquivo na lista é um arquivo de código para definir o modo.
+        is_modo_programacao = any(nome.lower().endswith(
+            tipos_de_codigo) for nome in lista_nomes_arquivos)
+
+        # 3. Criar um nome de arquivo descritivo para usar nos prompts.
+        if len(lista_nomes_arquivos) > 1:
+            nome_arquivo_display = f"{len(lista_nomes_arquivos)} arquivos"
+        elif lista_nomes_arquivos:
+            nome_arquivo_display = lista_nomes_arquivos[0]
+        else:
+            nome_arquivo_display = "documento carregado"  # Caso de fallback
+
+        if is_modo_programacao:
+            # MODO PROGRAMAÇÃO
             prompt_sistema_programacao = """
             Você é Jarvis, um programador expert e assistente de código sênior.
             Sua tarefa é analisar, refatorar, depurar e criar código com base no contexto fornecido e nas solicitações do usuário.
@@ -897,11 +950,12 @@ def processar_entrada_usuario(prompt_usuario, metadados=None):
             """
             historico_para_analise = [
                 {"role": "system", "content": prompt_sistema_programacao},
-                {"role": "user", "content": f"O seguinte arquivo de código está em contexto para nossa conversa:\n`{nome_arquivo}`\n\nCONTEÚDO DO ARQUIVO:\n---\n{contexto_do_arquivo}\n---"},
-                {"role": "assistant", "content": f"Entendido. O arquivo `{nome_arquivo}` foi carregado. Estou pronto para ajudar com o código."}
+                {"role": "user", "content": f"O(s) seguinte(s) arquivo(s) de código está(ão) em contexto para nossa conversa:\n`{nome_arquivo_display}`\n\nCONTEÚDO DO(S) ARQUIVO(S):\n---\n{contexto_do_arquivo}\n---"},
+                {"role": "assistant",
+                    "content": f"Entendido. O(s) arquivo(s) `{nome_arquivo_display}` foi(ram) carregado(s). Estou pronto para ajudar com o código."}
             ]
         else:
-            # MODO DOCUMENTO/DADOS (CORRETO)
+            # MODO DOCUMENTO/DADOS
             historico_para_analise = [
                 {"role": "system", "content": "Você é um assistente especialista em análise de dados e documentos. Responda às perguntas do usuário baseando-se ESTRITAMENTE no conteúdo do documento fornecido abaixo."},
                 {"role": "user", "content": f"CONTEÚDO DO DOCUMENTO PARA ANÁLISE:\n---\n{contexto_do_arquivo}\n---"},
@@ -913,8 +967,6 @@ def processar_entrada_usuario(prompt_usuario, metadados=None):
         historico_final = historico_para_analise
     else:
         historico_final = historico_chat
-
-
 
     # <--- MODIFICADO: Passa o tom do usuário (dos metadados) para a função de resposta.
     tom_do_usuario = metadados.get("sentimento_usuario")
@@ -989,13 +1041,11 @@ def gerar_resumo_curto_prazo(historico_chat):
     """
 
     try:
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-5-nano')
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=100
+            messages=[{"role": "user", "content": prompt}],            
+            max_completion_tokens=100
         )
         resumo = resposta_modelo.choices[0].message.content.strip()
         return resumo
@@ -1022,13 +1072,12 @@ def gerar_titulo_conversa_com_ia(mensagens):
     """
 
     try:
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-5-nano')
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=15,
-            temperature=0.2
+            max_completion_tokens=15,
+            
         )
         titulo = resposta_modelo.choices[0].message.content.strip().replace(
             '"', '')
@@ -1036,6 +1085,7 @@ def gerar_titulo_conversa_com_ia(mensagens):
     except Exception as e:
         print(f"Erro ao gerar título: {e}")
         return "Chat"
+
 
 
 def precisa_buscar_na_web(pergunta_usuario):
@@ -1066,13 +1116,13 @@ def precisa_buscar_na_web(pergunta_usuario):
     Pergunta do usuário: "{pergunta_usuario}"
     """
     try:
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+                
+        modelo_selecionado = 'gpt-4o'
+        
         resposta_modelo = modelo.chat.completions.create(
             model=modelo_selecionado,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=10
+            messages=[{"role": "user", "content": prompt}],            
+            max_completion_tokens=10
         )
         decisao = resposta_modelo.choices[0].message.content.strip().upper()
         print(f"Decisão do classificador: {decisao}")
@@ -1123,7 +1173,7 @@ def executar_analise_profunda(df):
     from contextlib import redirect_stdout
     with redirect_stdout(buffer):
         print("--- RESUMO ESTATÍSTICO (NUMÉRICO) ---\n")
-        print(df.describe(include=np.number)) # Mais explícito
+        print(df.describe(include=np.number))  # Mais explícito
         print("\n\n--- RESUMO CATEGÓRICO ---\n")
         if not df.select_dtypes(include=['object', 'category']).empty:
             print(df.describe(include=['object', 'category']))
@@ -1137,6 +1187,7 @@ def executar_analise_profunda(df):
         # numeric_only=True é o padrão em versões recentes do pandas, mas é bom manter por compatibilidade.
         print(df.corr(numeric_only=True))
     return buffer.getvalue()
+
 
 
 def analisar_dados_com_ia(prompt_usuario, df):
@@ -1162,12 +1213,12 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
 """
 
     try:
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        # Vamos forçar o uso do modelo mais robusto para esta tarefa crítica
+        modelo_selecionado = 'gpt-5-mini' 
         resposta_modelo_codigo = modelo.chat.completions.create(
             model=modelo_selecionado,
             messages=[{"role": "user", "content": prompt_gerador_codigo}],
-            temperature=0,
+            
         )
         codigo_gerado = resposta_modelo_codigo.choices[0].message.content.strip()
 
@@ -1213,12 +1264,12 @@ Sua tarefa é gerar um código Python, e SOMENTE o código, para obter os dados 
         - No final, sugira 2 ou 3 perguntas inteligentes que o usuário poderia fazer para aprofundar a análise.
         """
 
-        modelo_selecionado = st.session_state.get(
-            'admin_model_choice', 'gpt-4o')
+        # Forçando o modelo robusto para a interpretação também
+        modelo_selecionado_interpretador = 'gpt-5-mini'
         resposta_modelo_interpretacao = modelo.chat.completions.create(
-            model=modelo_selecionado,
+            model=modelo_selecionado_interpretador,
             messages=[{"role": "user", "content": prompt_interpretador}],
-            temperature=0.4,
+            
         )
 
         resumo_claro = resposta_modelo_interpretacao.choices[0].message.content
@@ -1237,15 +1288,22 @@ st.markdown("""<style>.stApp { background-color: #0d1117; color: #c9d1d9; } .stT
 memoria = carregar_memoria()
 
 # --- GESTÃO DE CHATS ---
+
+
 def padronizar_chat(chat):
     return {
         "title": chat.get("title", "Novo Chat"),
         "messages": chat.get("messages", []),
         "contexto_arquivo": chat.get("contexto_arquivo"),
-        "processed_file_name": chat.get("processed_file_name"),
         "dataframe": chat.get("dataframe"),
         "resumo_curto_prazo": chat.get("resumo_curto_prazo", ""),
-        "ultima_mensagem_falada": chat.get("ultima_mensagem_falada")
+        "ultima_mensagem_falada": chat.get("ultima_mensagem_falada"),
+
+        "processed_file_names": chat.get("processed_file_names", []),
+
+        "processed_image_names": chat.get("processed_image_names", []),
+
+        "processed_file_name": chat.get("processed_file_name"),
     }
 
 
@@ -1264,6 +1322,7 @@ def create_new_chat():
 
     # st.rerun() não é necessário aqui, pois o on_click do botão já fará isso.
 
+
 def switch_chat(chat_id):
     st.session_state.current_chat_id = chat_id
 
@@ -1280,9 +1339,11 @@ def delete_chat(chat_id_to_delete):
                 create_new_chat()
 
         salvar_chats(st.session_state["username"])
-        # st.rerun() não é necessário, o on_click do botão fará isso.
+        
 
 # <--- NOVO: Função para o botão de logout
+
+
 def fazer_logout():
     """Limpa a sessão para deslogar o usuário."""
     st.session_state.clear()
@@ -1299,13 +1360,18 @@ if "chats" not in st.session_state:
 if not st.session_state.chats:
     create_new_chat()
 
+# BLOCO NOVO CORRIGIDO
 if "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.chats:
     st.session_state.current_chat_id = list(st.session_state.chats.keys())[-1]
 
-chat_id = st.session_state.current_chat_id
-active_chat = padronizar_chat(st.session_state.chats[chat_id])
-st.session_state.chats[chat_id] = active_chat
+active_chat = st.session_state.chats[st.session_state.current_chat_id]
 
+temp_chat_padronizado = padronizar_chat(active_chat)
+for key, value in temp_chat_padronizado.items():
+    if key not in active_chat:
+        active_chat[key] = value
+
+chat_id = st.session_state.current_chat_id
 
 
 def img_to_base64(path):
@@ -1365,15 +1431,16 @@ with st.sidebar:
                              label="Visualizar Feedback", icon="📊")
         st.sidebar.radio(
             "Alternar Modelo OpenAI (Sessão Atual):",
-            options=['gpt-4o', 'gpt-3.5-turbo'],
+            options=['gpt-5-nano', 'gpt-5-mini'],
             key='admin_model_choice',
-            help="Esta opção afeta apenas a sua sessão de administrador e reseta ao sair. O padrão para todos os outros usuários é sempre gpt-4o."
+            help="Esta opção afeta apenas a sua sessão de administrador e reseta ao sair. O padrão para todos os outros usuários é sempre gpt-5-nano."
         )
 
     st.sidebar.divider()
 
     # <--- MODIFICADO: Uso de on_click para estabilidade
-    st.button("➕ Novo Chat", use_container_width=True, type="primary", on_click=create_new_chat)
+    st.button("➕ Novo Chat", use_container_width=True,
+              type="primary", on_click=create_new_chat)
 
     voz_ativada = st.checkbox(
         "🔊 Ouvir respostas do Jarvis", value=False, key="voz_ativada")
@@ -1400,10 +1467,10 @@ with st.sidebar:
             with col1:
                 # CORREÇÃO 1 (Já feita por você): Botão de exibição
                 st.button(chat_data.get("title", "Chat sem título"), key=f"chat_{id}",
-                             use_container_width=True,
-                             type="primary" if chat_selected else "secondary",
-                             on_click=switch_chat,
-                             args=(id,))
+                          use_container_width=True,
+                          type="primary" if chat_selected else "secondary",
+                          on_click=switch_chat,
+                          args=(id,))
             with col2:
                 with st.popover("✏️", use_container_width=True):
                     # CORREÇÃO 2: Campo de texto para renomear
@@ -1412,18 +1479,19 @@ with st.sidebar:
                     if st.button("Salvar", key=f"save_rename_{id}"):
                         st.session_state.chats[id]["title"] = new_title
                         salvar_chats(st.session_state["username"])
-                        st.rerun() 
+                        st.rerun()
             with col3:
                 with st.popover("🗑️", use_container_width=True):
-                    # CORREÇÃO 3: Mensagem de confirmação de exclusão
                     st.write(
                         f"Tem certeza que deseja excluir **{chat_data.get('title', 'este chat')}**?")
                     
-                    st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}",
-                                  on_click=delete_chat,
-                                  args=(id,))
+                    
+                    if st.button("Sim, excluir!", type="primary", key=f"delete_confirm_{id}"):
+                        delete_chat(id)
+                        st.rerun()
 
-        st.button("🚪 Sair", use_container_width=True, type="secondary", on_click=fazer_logout)
+        st.button("🚪 Sair", use_container_width=True,
+                  type="secondary", on_click=fazer_logout)
     st.divider()
 
 if st.session_state.get("show_feedback_form", False) and st.session_state.get("username") != ADMIN_USERNAME:
@@ -1443,6 +1511,8 @@ if st.session_state.get("show_feedback_form", False) and st.session_state.get("u
                 st.session_state["show_feedback_form"] = False
                 st.rerun()
 
+# Bloco de código para substituir o original em seu app.py
+
 with st.expander("📂 Anexar Arquivos"):
     tipos_dados = ["csv", "xlsx", "xls", "json"]
     tipos_documentos = [
@@ -1453,55 +1523,84 @@ with st.expander("📂 Anexar Arquivos"):
 
     chat_id_for_key = st.session_state.current_chat_id
 
-    arquivo = st.file_uploader(
-        "📄 Documento, Código ou Dados (.csv, .xlsx, .json)",
+    # ALTERAÇÃO 1: Habilitar múltiplos arquivos e renomear a variável para o plural
+    arquivos_carregados = st.file_uploader(
+        "📄 Documentos, Códigos ou 1 Arquivo de Dados (.csv, .xlsx, .json)",
         type=tipos_dados + tipos_documentos,
-        key=f"uploader_doc_{chat_id_for_key}"
+        key=f"uploader_doc_{chat_id_for_key}",
+        accept_multiple_files=True  # <-- MUDANÇA PRINCIPAL
     )
 
-    if arquivo and arquivo.name != active_chat.get("processed_file_name"):
-        active_chat["contexto_arquivo"] = None
-        active_chat["dataframe"] = None
-        file_extension = arquivo.name.split('.')[-1].lower()
+    # ALTERAÇÃO 2: Adaptar a lógica para processar uma lista de arquivos
+    if arquivos_carregados:
+        nomes_arquivos_atuais = sorted([f.name for f in arquivos_carregados])
+        nomes_processados_anteriormente = active_chat.get(
+            "processed_file_names", [])
 
-        if file_extension in tipos_dados:
-            with st.spinner(f"Analisando '{arquivo.name}'..."):
-                try:
-                    df = None
-                    if file_extension == 'csv':
-                        df = pd.read_csv(arquivo)
-                    elif file_extension in ['xlsx', 'xls']:
-                        df = pd.read_excel(arquivo, engine='openpyxl')
-                    elif file_extension == 'json':
-                        df = pd.read_json(arquivo)
+        # Processar apenas se a lista de arquivos mudou
+        if nomes_arquivos_atuais != nomes_processados_anteriormente:
+            active_chat["contexto_arquivo"] = None
+            active_chat["dataframe"] = None
 
-                    if df is not None:
-                        active_chat["dataframe"] = df
-                        active_chat["processed_file_name"] = arquivo.name
-                        st.success(
-                            f"Arquivo '{arquivo.name}' carregado! Jarvis está em modo de análise.")
-                        active_chat["messages"].append({
-                            "role": "assistant", "type": "text",
-                            "content": f"Arquivo `{arquivo.name}` carregado. Agora sou sua assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
-                        })
-                except Exception as e:
-                    st.error(f"Erro ao carregar o arquivo de dados: {e}")
-        else:
-            active_chat["contexto_arquivo"] = extrair_texto_documento(arquivo)
-            active_chat["processed_file_name"] = arquivo.name
+            # Validação para o modo de análise de dados
+            arquivos_de_dados = [f for f in arquivos_carregados if f.name.split(
+                '.')[-1].lower() in tipos_dados]
+            if len(arquivos_de_dados) > 1:
+                st.warning(
+                    "⚠️ O modo de análise de dados funciona com apenas um arquivo (.csv, .xlsx) por vez. Por favor, envie somente um arquivo de dados para análise.")
+                # Limpa o uploader para evitar loop de erro
+                st.session_state[f"uploader_doc_{chat_id_for_key}"] = []
+                st.rerun()
 
-        salvar_chats(st.session_state["username"])
-        st.rerun()
+            elif len(arquivos_de_dados) == 1:
+                arquivo_de_dados = arquivos_de_dados[0]
+                with st.spinner(f"Analisando '{arquivo_de_dados.name}'..."):
+                    try:
+                        df = None
+                        file_extension = arquivo_de_dados.name.split(
+                            '.')[-1].lower()
+                        if file_extension == 'csv':
+                            df = pd.read_csv(arquivo_de_dados)
+                        elif file_extension in ['xlsx', 'xls']:
+                            df = pd.read_excel(
+                                arquivo_de_dados, engine='openpyxl')
+                        elif file_extension == 'json':
+                            df = pd.read_json(arquivo_de_dados)
 
-    imagem = st.file_uploader(
-        "🖼️ Imagem", type=["png", "jpg", "jpeg"], key=f"uploader_img_{chat_id_for_key}")
-    if imagem and imagem.name != active_chat.get("processed_file_name"):
-        st.image(imagem, width=200)
-        active_chat["contexto_arquivo"] = analisar_imagem(imagem)
-        active_chat["processed_file_name"] = imagem.name
-        salvar_chats(st.session_state["username"])
-        st.rerun()
+                        if df is not None:
+                            active_chat["dataframe"] = df
+                            active_chat["processed_file_names"] = [
+                                arquivo_de_dados.name]
+                            st.success(
+                                f"Arquivo '{arquivo_de_dados.name}' carregado! Jarvis está em modo de análise.")
+                            active_chat["messages"].append({
+                                "role": "assistant", "type": "text",
+                                "content": f"Arquivo `{arquivo_de_dados.name}` carregado. Agora sou sua assistente de análise de dados. Peça-me para gerar resumos, médias, ou criar gráficos."
+                            })
+                    except Exception as e:
+                        st.error(f"Erro ao carregar o arquivo de dados: {e}")
 
+            else:  # Caso de múltiplos arquivos de documento/código
+                conteudo_agregado = []
+                with st.spinner(f"Analisando {len(arquivos_carregados)} arquivo(s)..."):
+                    for arquivo in arquivos_carregados:
+                        texto_extraido = extrair_texto_documento(arquivo)
+                        conteudo_agregado.append(
+                            f"--- INÍCIO DO ARQUIVO: {arquivo.name} ---\n\n{texto_extraido}\n\n--- FIM DO ARQUIVO: {arquivo.name} ---")
+
+                    active_chat["contexto_arquivo"] = "\n\n".join(
+                        conteudo_agregado)
+                    active_chat["processed_file_names"] = nomes_arquivos_atuais
+                    active_chat["messages"].append({
+                        "role": "assistant", "type": "text",
+                        "content": f"Análise concluída. Carreguei o conteúdo de {len(arquivos_carregados)} arquivos para o nosso contexto. Pode fazer perguntas sobre eles."
+                    })
+
+            salvar_chats(st.session_state["username"])
+            st.rerun()
+
+       
+    
     if active_chat.get("dataframe") is not None:
         st.info("Jarvis em 'Modo de Análise de Dados'.")
         with st.expander("Ver resumo dos dados"):
@@ -1509,15 +1608,156 @@ with st.expander("📂 Anexar Arquivos"):
             buffer = io.StringIO()
             active_chat["dataframe"].info(buf=buffer)
             st.text(buffer.getvalue())
-        # <--- MODIFICADO: Uso de on_click para estabilidade
-        st.button("🗑️ Sair do Modo de Análise", type="primary", key=f"forget_btn_data_{chat_id}", on_click=create_new_chat)
+        st.button("🗑️ Sair do Modo de Análise", type="primary",
+                  key=f"forget_btn_data_{chat_id}", on_click=create_new_chat)
 
     elif active_chat.get("contexto_arquivo"):
-        st.info("Jarvis está em 'Modo de Análise de Documento'.")
+        # ALTERAÇÃO 3: Atualizar o rótulo para refletir múltiplos arquivos
+        nomes_dos_arquivos = ", ".join(
+            active_chat.get("processed_file_names", []))
+        st.info(
+            f"Jarvis em 'Modo de Análise de Documentos' para: **{nomes_dos_arquivos}**.")
         st.text_area("Conteúdo extraído:",
                      value=active_chat["contexto_arquivo"], height=200, key=f"contexto_arquivo_{chat_id}")
-        # <--- MODIFICADO: Uso de on_click para estabilidade
-        st.button("🗑️ Esquecer Arquivo Atual", type="primary", key=f"forget_btn_doc_{chat_id}", on_click=create_new_chat)
+        st.button("🗑️ Esquecer Arquivo(s) Atual(is)", type="primary",
+                  key=f"forget_btn_doc_{chat_id}", on_click=create_new_chat)
+
+# Bloco novo e independente para análise de imagem, não afeta o anterior
+with st.expander("📸 Análise de Imagem com Câmera ou Upload"):
+
+    # Oferece as duas opções de entrada
+    imagem_upload = st.file_uploader("Ou faça o upload de uma imagem", type=[
+                                     "png", "jpg", "jpeg"], key=f"uploader_img_nova_{chat_id}")
+    imagem_camera = st.camera_input(
+        "Tire uma foto para Jarvis analisar", key=f"camera_input_{chat_id}")
+
+    # Prioriza a imagem da câmera se ambas estiverem presentes
+    imagem_a_analisar = imagem_camera if imagem_camera else imagem_upload
+
+    # Só mostra as opções de análise se uma imagem tiver sido fornecida
+    if imagem_a_analisar:
+        st.image(imagem_a_analisar, width=250)
+
+        # Menu de escolha para o usuário
+        tipo_analise_imagem = st.radio(
+            "O que você quer que eu analise nesta imagem?",
+            options=[
+                "Descrição Geral (GPT-4o)",
+                "Análise Facial (Rekognition)",
+                "Detectar Objetos (Rekognition)",
+                "Extrair Texto (Rekognition)"
+            ],
+            key=f"radio_analise_{chat_id}"
+        )
+
+        # CORREÇÃO: O botão e toda a lógica de análise foram movidos para DENTRO deste 'if'.
+        # Agora eles só aparecem e rodam se 'imagem_a_analisar' existir.
+        if st.button("Analisar Imagem", key=f"btn_analisar_img_{chat_id}"):
+            image_bytes = imagem_a_analisar.getvalue()
+            resposta_final_analise = ""
+
+            if tipo_analise_imagem == "Descrição Geral (GPT-4o)":
+                # Chama sua função original sem tocar no Rekognition
+                with st.spinner("Analisando com GPT-4o..."):
+                    resposta_final_analise = analisar_imagem(imagem_a_analisar)
+
+            else:
+                # Determina o modo do Rekognition baseado na escolha
+                modo_rekognition = "faces" if "Facial" in tipo_analise_imagem else "labels" if "Objetos" in tipo_analise_imagem else "text"
+
+                # Chama a nova função do Rekognition
+                resultado_rekognition = analisar_imagem_com_rekognition(
+                    image_bytes, tipo_analise=modo_rekognition)
+
+                if resultado_rekognition:
+                    prompt_interpretacao = ""  # Inicia a variável de prompt
+
+                    # --- LÓGICA CORRIGIDA AQUI ---
+
+                    # 1. Prompt para ANÁLISE FACIAL (o novo prompt amigável)
+                    if modo_rekognition == "faces":
+                        with st.spinner("Descrevendo a pessoa na foto..."):
+                            prompt_interpretacao = f"""
+                            Você é Jarvis, um assistente de IA. Você recebeu um relatório técnico em JSON do Amazon Rekognition sobre um rosto em uma foto. Sua tarefa é transformar esses dados em uma descrição natural e amigável, como se estivesse descrevendo a pessoa para um amigo.
+
+                            INSTRUÇÕES:
+                            1.  Escreva em um parágrafo ou em tópicos curtos e simples.
+                            2.  Foque nas características principais: gênero, faixa etária, emoção principal e traços marcantes (barba, óculos, sorriso).
+                            3.  Traduza os dados técnicos em linguagem natural. Por exemplo, em vez de "Sorriso: Não (confiança 99%)", diga "Ele parece estar sério na foto".
+                            4.  **NÃO inclua** dados muito técnicos como coordenadas de BoundingBox, valores de pose (Rolo, Guinada), pontuação de qualidade da imagem ou a lista de todas as emoções com porcentagens. Mencione apenas a emoção principal.
+                            5.  Termine de forma conversacional.
+
+                            DADOS TÉCNICOS DO REKOGNITION:
+                            ```json
+                            {json.dumps(resultado_rekognition, indent=2, ensure_ascii=False)}
+                            ```
+                            """
+                    
+                    # 2. Prompt para DIGITALIZAR TEXTO
+                    elif modo_rekognition == "text":
+                        with st.spinner("Digitalizando documento..."):
+                            prompt_interpretacao = f"""
+                            Você é um assistente de digitalização de documentos. Sua tarefa é extrair e reconstruir o texto a partir dos dados brutos em JSON fornecidos pela ferramenta Amazon Rekognition.
+
+                            INSTRUÇÕES:
+                            1.  Analise o JSON abaixo, que contém uma lista de textos detectados.
+                            2.  Extraia APENAS o conteúdo do campo "DetectedText" de cada item.
+                            3.  Ignore completamente os dados de confiança, geometria, IDs e outros metadados.
+                            4.  Monte o texto final em uma ordem lógica, tentando preservar parágrafos e quebras de linha.
+                            5.  Responda APENAS com o texto final reconstruído, sem nenhuma outra frase ou explicação.
+
+                            DADOS BRUTOS DO REKOGNITION:
+                            ```json
+                            {json.dumps(resultado_rekognition, indent=2, ensure_ascii=False)}
+                            ```
+                            """
+                    
+                    # 3. Prompt para DETECTAR OBJETOS (o resumo técnico)
+                    else: # modo_rekognition == "labels"
+                        with st.spinner("Interpretando análise técnica..."):
+                            prompt_interpretacao = f"""
+                            Você é Jarvis, um assistente de IA. Você recebeu um relatório técnico em JSON do Amazon Rekognition com uma lista de "rótulos" (objetos e conceitos) identificados em uma foto. Sua tarefa é transformar essa lista técnica em uma descrição simples e natural, como se estivesse apenas dizendo o que você vê na imagem.
+
+                            INSTRUÇÕES:
+                            1.  Escreva um parágrafo curto e conversacional.
+                            2.  Sintetize rótulos relacionados. Por exemplo, se a lista tiver "Pessoa", "Rosto", "Cabeça", "Selfie", resuma como "uma selfie de uma pessoa".
+                            3.  Mencione os 3 a 5 rótulos mais importantes e com maior confiança.
+                            4.  **NÃO inclua** os percentuais de confiança, categorias pai, ou qualquer outro dado técnico. Apenas o nome dos objetos e conceitos.
+                            5.  A resposta deve ser apenas a descrição, sem introduções como "aqui está um resumo".
+
+                            DADOS TÉCNICOS DO REKOGNITION:
+                            ```json
+                            {json.dumps(resultado_rekognition, indent=2, ensure_ascii=False)}
+                            ```
+                            """
+                    
+                    # O resto do código para chamar a IA continua o mesmo
+                    if prompt_interpretacao:
+                        resposta_interpretada = modelo.chat.completions.create(
+                            model=st.session_state.get('admin_model_choice', 'gpt-5-nano'),
+                            messages=[{"role": "user", "content": prompt_interpretacao}]
+                        ).choices[0].message.content
+                        resposta_final_analise = resposta_interpretada
+                    else:
+                        resposta_final_analise = "Não foi possível gerar um prompt para a análise."
+                else:
+                    resposta_final_analise = "Não foi possível obter uma análise do Amazon Rekognition."
+
+            
+            if resposta_final_analise and resposta_final_analise.strip():
+                st.success("Análise concluída!")
+                active_chat["contexto_arquivo"] = resposta_final_analise
+                active_chat["messages"].append(
+                    {"role": "assistant", "content": resposta_final_analise})
+            else:
+                
+                st.warning("A análise foi concluída, mas a IA não retornou um conteúdo para esta imagem.")
+                active_chat["messages"].append(
+                    {"role": "assistant", "content": "Não consegui gerar uma descrição para esta imagem. Por favor, tente com outra."})
+            
+            
+            salvar_chats(st.session_state["username"])
+            st.rerun()
 
 
 # --- ÁREA PRINCIPAL DO CHAT ---
@@ -1529,7 +1769,8 @@ for i, mensagem in enumerate(active_chat["messages"]):
         if mensagem.get("type") == "plot":
             st.plotly_chart(mensagem["content"], use_container_width=True)
         elif mensagem.get("type") == "image":
-            st.image(mensagem["content"], caption=mensagem.get("prompt", "Imagem gerada"))
+            st.image(mensagem["content"], caption=mensagem.get(
+                "prompt", "Imagem gerada"))
             try:
                 base64_data = mensagem["content"].split(",")[1]
                 image_bytes = base64.b64decode(base64_data)
@@ -1538,7 +1779,7 @@ for i, mensagem in enumerate(active_chat["messages"]):
                     data=image_bytes,
                     file_name="imagem_gerada_jarvis.png",
                     mime="image/png",
-                    key=f"download_img_{i}"  
+                    key=f"download_img_{i}"
                 )
             except Exception as e:
                 st.warning(f"Não foi possível gerar o botão de download: {e}")
@@ -1610,6 +1851,8 @@ if 'pdf_para_download' in st.session_state:
         )
 
 # <--- NOVO: Função para lidar com comandos, limpando o bloco principal
+
+
 def processar_comandos(prompt_usuario, active_chat):
     """Processa comandos especiais como /imagine, /pdf, etc. Retorna True se um comando foi processado."""
     prompt_lower = prompt_usuario.lower().strip()
@@ -1617,42 +1860,64 @@ def processar_comandos(prompt_usuario, active_chat):
     if prompt_lower.startswith("/lembrese "):
         texto_para_lembrar = prompt_usuario[10:].strip()
         if texto_para_lembrar:
-            with st.chat_message("assistant"):
-                st.info("Memorizando sua preferência...")
-                processar_comando_lembrese(texto_para_lembrar)
+            # Primeiro, executamos o comando em segundo plano
+            processar_comando_lembrese(texto_para_lembrar)
+            
+            # Agora, adicionamos uma mensagem de confirmação ao histórico do chat
+            active_chat["messages"].append({
+                "role": "assistant", 
+                "type": "text", 
+                "content": "Entendido! Guardei essa informação na minha memória de preferências."
+            })
+            # Salvamos o chat com a nova mensagem
+            salvar_chats(st.session_state["username"])
+            # E finalmente, recarregamos a página
+            st.rerun()
         return True
 
     elif prompt_lower.startswith("/imagine "):
         prompt_da_imagem = prompt_usuario[9:].strip()
         if prompt_da_imagem:
-            with st.chat_message("assistant"):
-                dados_da_imagem = gerar_imagem_com_dalle(prompt_da_imagem)
-                if dados_da_imagem:
-                    active_chat["messages"].append(
-                        {"role": "assistant", "type": "image", "content": dados_da_imagem, "prompt": prompt_da_imagem}
-                    )
-                    salvar_chats(st.session_state["username"])
-            st.rerun()
+            dados_da_imagem = gerar_imagem_com_dalle(prompt_da_imagem)
+            if dados_da_imagem:
+                active_chat["messages"].append(
+                    {"role": "assistant", "type": "image", 
+                     "content": dados_da_imagem, "prompt": prompt_da_imagem}
+                )
+                salvar_chats(st.session_state["username"])
+                st.rerun()
         return True
 
+    
     elif prompt_lower.startswith("/pdf "):
         topico_pdf = prompt_usuario[5:].strip()
         if topico_pdf:
-            with st.chat_message("assistant"):
-                with st.spinner("Criando seu PDF..."):
-                    texto_completo_ia = gerar_conteudo_para_pdf(topico_pdf)
+            with st.spinner("Gerando conteúdo para o PDF..."):
+                texto_completo_ia = gerar_conteudo_para_pdf(topico_pdf)
+
+                        
+            if texto_completo_ia and texto_completo_ia.strip():
+                with st.spinner("Formatando e criando o PDF..."):
                     linhas_ia = texto_completo_ia.strip().split('\n')
                     titulo_documento = linhas_ia[0].replace('**', '').replace('###', '').replace('##', '').replace('#', '').strip()
                     texto_corpo = '\n'.join(linhas_ia[1:]).strip()
+                    
                     pdf_bytes = criar_pdf(texto_corpo, titulo_documento)
                     st.session_state['pdf_para_download'] = pdf_bytes
                     st.session_state['pdf_filename'] = f"{titulo_documento.replace(' ', '_')[:30]}.pdf"
-            active_chat["messages"].append(
-                {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{titulo_documento}'. O botão de download foi exibido."})
+                
+                active_chat["messages"].append(
+                    {"role": "assistant", "type": "text", "content": f"Criei um PDF sobre '{titulo_documento}'. O botão de download foi exibido."})
+            
+            else:
+                
+                active_chat["messages"].append(
+                    {"role": "assistant", "type": "text", "content": "Desculpe, não consegui gerar o conteúdo para o PDF sobre este tópico. Tente novamente ou com um tópico diferente."})
+
             salvar_chats(st.session_state["username"])
             st.rerun()
         return True
-    
+
     elif prompt_lower.startswith("/gerar_codigo "):
         descricao_codigo = prompt_usuario[14:].strip()
         if descricao_codigo:
@@ -1669,31 +1934,27 @@ def processar_comandos(prompt_usuario, active_chat):
                     # seu código aqui
                     ```
                     """
-                    modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+                    modelo_selecionado = 'gpt-5-mini'
                     resposta_modelo = modelo.chat.completions.create(
                         model=modelo_selecionado,
                         messages=[{"role": "user", "content": prompt_para_ia}],
-                        temperature=0.1,
+                        
                     )
                     codigo_gerado = resposta_modelo.choices[0].message.content
-                    active_chat["messages"].append({"role": "assistant", "type": "text", "content": codigo_gerado})
+                    active_chat["messages"].append(
+                        {"role": "assistant", "type": "text", "content": codigo_gerado})
                     salvar_chats(st.session_state["username"])
             st.rerun()
         return True
 
+    
     elif prompt_lower.startswith(("/explicar", "/refatorar", "/depurar")):
-        if not active_chat.get("contexto_arquivo"):
-            st.warning("Para usar este comando, por favor, carregue um arquivo de código primeiro.")
-            active_chat["messages"].append({"role": "assistant", "type": "text", "content": "Para usar este comando, por favor, carregue um arquivo de código primeiro."})
-            
-            st.rerun() 
-            return True 
+        if active_chat.get("contexto_arquivo"):
+            partes = prompt_usuario.strip().split(" ", 1)
+            comando = partes[0].lower()
+            instrucao_adicional = partes[1] if len(partes) > 1 else ""
+            nome_arquivo = active_chat.get("processed_file_names", [""])[0]
 
-        comando = prompt_lower.split(' ')[0] # /explicar, /refatorar, etc.
-        instrucao_adicional = prompt_usuario[len(comando):].strip()
-        nome_arquivo = active_chat.get("processed_file_name", "o arquivo atual")
-
-        with st.chat_message("assistant"):
             with st.spinner(f"Processando '{comando}' no arquivo `{nome_arquivo}`..."):
                 prompt_para_ia = f"""
                 Você é um programador expert. Sua tarefa é executar a ação '{comando}' no código-fonte fornecido.
@@ -1708,38 +1969,78 @@ def processar_comandos(prompt_usuario, active_chat):
                 {active_chat.get("contexto_arquivo")}
                 ---
                 """
-                modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+                                
+                modelo_selecionado = 'gpt-5-mini'
+                
                 resposta_modelo = modelo.chat.completions.create(
                     model=modelo_selecionado,
-                    messages=[{"role": "user", "content": prompt_para_ia}],
-                    temperature=0.2,
+                    messages=[{"role": "user", "content": prompt_para_ia}]
+                    
                 )
                 resposta_analise = resposta_modelo.choices[0].message.content
-                active_chat["messages"].append({"role": "assistant", "type": "text", "content": resposta_analise})
+                                
+                active_chat["messages"].append(
+                    {"role": "assistant", "type": "text", "content": resposta_analise})
                 salvar_chats(st.session_state["username"])
-        st.rerun()
+                st.rerun()
+        else:
+            st.warning("Para usar os comandos /explicar, /refatorar ou /depurar, primeiro carregue um arquivo de código.")
         return True
 
-    
     elif prompt_lower == "/raiox":
         if active_chat.get("dataframe") is not None:
             df = active_chat.get("dataframe")
             with st.spinner("Executando Raio-X completo dos dados..."):
                 resultados_brutos = executar_analise_profunda(df)
-                prompt_interpretador = f"""Você é Jarvis, um analista de dados sênior. O usuário pediu um Raio-X completo do dataset. Abaixo estão os resultados brutos. Sua tarefa é criar um relatório claro e com insights, explicando cada seção (resumo estatístico, categorias, valores únicos, dados faltantes e correlações) para o usuário.\n\n--- DADOS BRUTOS ---\n{resultados_brutos}\n--- FIM DOS DADOS BRUTOS ---"""
-                modelo_selecionado = st.session_state.get('admin_model_choice', 'gpt-4o')
+                prompt_interpretador = f"""
+                Você é Jarvis, um especialista em Análise e Visualização de Dados. Sua missão é transformar dados brutos e complexos em um relatório executivo claro, visual e acionável para um usuário de negócios. O usuário pediu um "Raio-X" do dataset.
+
+                **TAREFA:**
+                Analise os resultados brutos abaixo e crie um relatório em Markdown formatado como um "Dashboard de Insights Rápidos".
+
+                **DADOS BRUTOS PARA ANÁLISE:**
+                ---
+                {resultados_brutos}
+                ---
+
+                **INSTRUÇÕES DE FORMATAÇÃO E CONTEÚDO (SIGA ESTRITAMENTE):**
+
+                1.  **Título Principal:** Comece com um título chamativo usando Markdown. Ex: `## 🔬 Raio-X Completo do Dataset`.
+
+                2.  **Resumo Geral (Seção "O Que Temos Aqui?"):**
+                    * Inicie com um parágrafo curto resumindo a "cara" do dataset (número de linhas, colunas e uma visão geral do que os dados representam). Use emojis como  Rows e Columns.
+
+                3.  **Principais Descobertas (Seção "Dashboard de Insights"):**
+                    * Use bullet points (`*`) ou um layout de colunas para apresentar os insights mais importantes de cada seção dos dados brutos.
+                    * **Resumo Estatístico:** Não mostre a tabela. Em vez disso, extraia os pontos mais interessantes (ex: "A idade média dos clientes é de 35 anos.", "O valor máximo de venda atingiu R$ 1.500,00.").
+                    * **Dados Categóricos:** Destaque a categoria mais comum em colunas importantes (ex: "O produto mais vendido foi o 'Modelo X'.").
+                    * **Valores Únicos:** Mencione colunas com muitos ou poucos valores únicos, explicando o que isso significa (ex: "A coluna 'ID do Usuário' tem valores únicos para cada linha, confirmando que é um bom identificador.").
+
+                4.  **Saúde dos Dados (Seção "Qualidade e Alertas 🚨"):**
+                    * **Dados Faltantes:** Se houver dados nulos, liste as colunas mais afetadas e o percentual de dados faltantes. Indique o nível de criticidade (ex: "ALERTA: A coluna 'email' tem 30% de valores nulos, o que pode impactar campanhas de marketing.").
+                    * **Correlações:** Se houver correlações fortes (positivas ou negativas, > 0.7 ou < -0.7), aponte-as e explique a relação em termos de negócio (ex: "INSIGHT: Encontramos uma forte correlação positiva entre 'tempo de uso' e 'valor da compra'. Isso sugere que clientes mais antigos tendem a gastar mais.").
+
+                5.  **Próximos Passos (Seção "Sugestões para Aprofundar 🧠"):**
+                    * Finalize sugerindo 2 ou 3 perguntas inteligentes que o usuário poderia fazer a seguir para explorar os dados mais a fundo. (Ex: "Podemos analisar as vendas por região?", "Qual o perfil dos clientes que mais compram o 'Produto Y'?").
+
+                **TOM E ESTILO:**
+                Seja claro, direto e evite jargão técnico. Apresente os números de forma amigável (ex: "56,8%" em vez de "0.56788"). O objetivo é gerar valor e clareza, não apenas transcrever os dados.
+                """
+                modelo_selecionado = 'gpt-5-mini'
                 resposta_interpretada = modelo.chat.completions.create(
                     model=modelo_selecionado,
-                    messages=[{"role": "user", "content": prompt_interpretador}]
+                    messages=[
+                        {"role": "user", "content": prompt_interpretador}]
                 ).choices[0].message.content
                 active_chat["messages"].append(
                     {"role": "assistant", "type": "text", "content": resposta_interpretada})
                 salvar_chats(st.session_state["username"])
                 st.rerun()
         else:
-            st.warning("Para usar o comando /raiox, por favor, carregue um arquivo de dados primeiro.")
+            st.warning(
+                "Para usar o comando /raiox, por favor, carregue um arquivo de dados primeiro.")
         return True
-    
+
     return False
 
 
@@ -1757,12 +2058,12 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
     if not comando_foi_processado:
         # 1. Analisa os metadados do prompt com UMA chamada de API otimizada
         metadados = analisar_metadados_prompt(prompt_usuario)
-        
+
         # 2. Salva as emoções e outros metadados coletados
         if st.session_state.username:
             timestamp_atual = datetime.now().isoformat()
             data_hora_obj = datetime.now()
-            
+
             emocoes_dict[timestamp_atual] = {
                 "emocao": metadados.get("emocao", "neutro"),
                 "sentimento_mensagem_usuario": metadados.get("sentimento_usuario", "n/a"),
@@ -1774,7 +2075,8 @@ if prompt_usuario := st.chat_input("Fale com a Jarvis ou use /lembrese, /imagine
             }
             salvar_emocoes(emocoes_dict, st.session_state.username)
             # Atualiza a última emoção na sessão para uso imediato
-            st.session_state["ultima_emocao_usuario"] = metadados.get("emocao", "neutro")
+            st.session_state["ultima_emocao_usuario"] = metadados.get(
+                "emocao", "neutro")
 
         # 3. Chama a função de processamento de chat, passando os metadados já coletados
         processar_entrada_usuario(prompt_usuario, metadados=metadados)
