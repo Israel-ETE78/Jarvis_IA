@@ -80,15 +80,6 @@
         "notificar_cliente": false,
         "primeiro_login": true
     },
-    "teste": {
-        "senha": "$2b$12$emwNk.ugil7.gYE4xHh3JOW/lRQv5KuL2gcEVMZVc90XA3SqVCgju",
-        "ativacao": "2025-07-23 15:40:02",
-        "expiracao": "2025-08-22 15:40:02",
-        "email": "israelnetmax@gmail.com",
-        "email_enviado": false,
-        "notificar_cliente": true,
-        "primeiro_login": false
-    },
     "ingrid": {
         "senha": "$2b$12$SlXErV5e2pu73WLDfYN2Su4PELcugpx5amugdSoKKH5K0dtr51ZWm",
         "ativacao": "2025-07-24 00:24:09",
