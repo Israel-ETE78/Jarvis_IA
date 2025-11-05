@@ -1417,6 +1417,7 @@ with st.sidebar:
     <a class='link-button' href='https://jarvis-lembrete.streamlit.app/' target='_blank'>🔔 Jarvis Lembrete</a>
     <a class='link-button' href='https://jarvis-ia-video-analysis.streamlit.app/' target='_blank'>🎥 Analisador de Mídia</a>
     <a class='link-button' href='https://ete-educa.streamlit.app/' target='_blank'>📝 Treino para Concursos</a>
+    <a class='link-button' href='https://quiz-jogo.onrender.com/' target='_blank'>🎮 Jogar Quiz Multiplayer</a>
     """, unsafe_allow_html=True)
 
     if st.session_state.get("username") == ADMIN_USERNAME:
