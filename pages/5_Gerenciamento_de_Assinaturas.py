@@ -112,26 +112,57 @@ if assinaturas:
 
             with st.popover(f"📝 Editar {user}", use_container_width=True):
                 with st.form(f"form_editar_{user}"):
-                    # ... (código do formulário de edição, que já estava correto) ...
                     st.write(f"Editando dados de **{user}**")
                     nova_senha_ed = st.text_input("Nova Senha (deixe em branco para não alterar)", type="password", key=f"senha_ed_{user}")
                     novo_email_ed = st.text_input("Novo E-mail", value=dados['email'], key=f"email_ed_{user}")
+                    
+                    # --- CAMPO ADICIONADO ---
+                    nova_expiracao_ed = st.text_input(
+                        "Data de Expiração (Formato: YYYY-MM-DD HH:MM:SS)",
+                        value=dados['expiracao'],
+                        key=f"expiracao_ed_{user}",
+                        help="Use '9999-12-31 23:59:59' para vitalícia."
+                    )
+                    # --- FIM DA ADIÇÃO ---
+
                     notificar_cliente_ed = st.checkbox("Notificar cliente?", value=dados.get("notificar_cliente", True), key=f"notificar_ed_{user}")
+                    
+                    # --- LÓGICA DE SALVAMENTO ATUALIZADA ---
                     if st.form_submit_button("Salvar Alterações"):
+                        erro_data = False
+                        try:
+                            # 1. Tenta validar a nova data de expiração
+                            datetime.strptime(nova_expiracao_ed, "%Y-%m-%d %H:%M:%S")
+                            # 2. Se for válida, salva no dicionário
+                            assinaturas[user]['expiracao'] = nova_expiracao_ed
+                        except ValueError:
+                            # 3. Se for inválida, mostra um erro e marca para não salvar
+                            st.error("Formato de data inválido! Use YYYY-MM-DD HH:MM:SS. A data NÃO foi alterada.")
+                            erro_data = True # Sinaliza que houve um erro
+
+                        # Lógica de senha (existente)
                         if nova_senha_ed:
                             senha_bytes_ed = nova_senha_ed.encode('utf-8')
                             hash_senha_ed = bcrypt.hashpw(senha_bytes_ed, bcrypt.gensalt())
                             assinaturas[user]['senha'] = hash_senha_ed.decode('utf-8')
                             assinaturas[user]['primeiro_login'] = False
                             st.success("Senha atualizada com sucesso!")
+
+                        # Lógica de email e notificação (existente)
                         assinaturas[user]['email'] = novo_email_ed
                         assinaturas[user]['notificar_cliente'] = notificar_cliente_ed
-                        salvar_assinaturas(assinaturas)
-                        st.success("Alterações salvas.")
-                        st.rerun()
+                        
+                        # Salva tudo no final, exceto se a data estava errada
+                        if not erro_data:
+                            salvar_assinaturas(assinaturas)
+                            st.success("Alterações salvas.")
+                            st.rerun()
+                        else:
+                            st.warning("Corrija a data antes de salvar.")
+                    # --- FIM DA LÓGICA ATUALIZADA ---
 
             st.text(f"E-mail: {dados['email']}")
-            st.text(f"Expira em: {dados['expiracao']}")
+            st.text(f"Expira em: {dados['expiracao']}") # Este campo agora reflete a data editada
             notificacao_status = "Ativada" if dados.get("notificar_cliente", True) else "Desativada"
             st.text(f"Notificação para cliente: {notificacao_status}")
             st.text(f"Status Primeiro Login: {'Sim' if dados.get('primeiro_login', False) else 'Não'}")
@@ -140,27 +171,21 @@ if assinaturas:
             with col1:
                 if st.button(f"🔁 Renovar (+30d)", key=f"renovar_{user}", use_container_width=True):
                     try:
-                        # Tenta converter a string de expiração para um objeto datetime
-                        # Assumindo que 'expiracao' aqui é a string da data salva para o usuário
-                        expiracao = datetime.fromisoformat(dados['expiracao']) # Use 'dados' ou como você estiver acessando a data de expiração da assinatura
+                        expiracao = datetime.fromisoformat(dados['expiracao']) 
                     except ValueError:
-                        # Se a data for inválida ou fora do intervalo, defina uma data padrão razoável
                         print(f"AVISO: Data de expiração inválida para o usuário {user}: {dados['expiracao']}. Redefinindo.")
-                        expiracao = datetime.now() + timedelta(days=30) # Ou outra data padrão
+                        expiracao = datetime.now() + timedelta(days=30) 
 
-                    # O resto do seu código de renovação
                     agora = datetime.now()
                     data_base = expiracao if expiracao > agora else agora
 
-                    # Verifica se a nova data não excede o limite máximo de datetime
-                    if data_base.year > (datetime.max.year - 1): # Deixa uma margem de segurança
+                    if data_base.year > (datetime.max.year - 1): 
                         st.error(f"Erro: A data de expiração para o usuário {user} está muito longe no futuro. Não é possível renovar.")
-                        # Você pode optar por não fazer nada ou definir uma data máxima permitida
                         nova_data = datetime.max
                     else:
                         nova_data = data_base + timedelta(days=30)
 
-                    assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S") # Ou o formato ISO se preferir
+                    assinaturas[user]['expiracao'] = nova_data.strftime("%Y-%m-%d %H:%M:%S") 
                     assinaturas[user]['email_enviado'] = False
                     salvar_assinaturas(assinaturas)
                     st.success(f"Assinatura de {user} renovada com sucesso para {nova_data.strftime('%Y-%m-%d %H:%M:%S')}!")
@@ -168,7 +193,6 @@ if assinaturas:
 
             with col2:
                 if st.button(f"🔑 Forçar Nova Senha", key=f"forcar_senha_{user}", use_container_width=True):
-                    # ... (código para forçar senha, que já estava correto) ...
                     assinaturas[user]['primeiro_login'] = True
                     salvar_assinaturas(assinaturas)
                     st.info(f"Usuário '{user}' será solicitado a criar nova senha no próximo login.")
@@ -186,7 +210,7 @@ if assinaturas:
                             # --- EXCLUIR ARQUIVOS DE DADOS DO USUÁRIO NO GITHUB ---
                             chat_path = f"dados/chats_historico_{user}.json"
                             preferences_path = f"preferencias/prefs_{user}.json"
-                            emocoes_path = f"dados/emocoes_{user}.json"
+                            emocoes_path = f"dados/emocoes_{user}.json" # Corrigido para o caminho que você usa
                             reflexoes_path = f"reflexoes/reflexoes_{user}.json"
                             anotacoes_path = f"anotacoes/anotacoes_{user}.json"
 
@@ -198,16 +222,17 @@ if assinaturas:
                             st.info(f"Todos os dados no GitHub de '{user}' foram solicitados para exclusão.")
 
                             # --- REMOVER ARQUIVOS LOCAIS (extra segurança) ---
-                            arquivos_locais = [
-                                chat_path,
-                                preferences_path,
-                                emocoes_path,
-                                reflexoes_path,
-                                anotacoes_path
+                            # Nota: Em um deploy na nuvem, estes arquivos podem não existir localmente.
+                            arquivos_locais_base = [
+                                (Path("dados") / "chats_historico" / f"chats_historico_{user}.json"), # Exemplo de caminho local
+                                (Path("preferencias") / f"prefs_{user}.json"),
+                                (Path("dados") / f"emocoes_{user}.json"),
+                                (Path("reflexoes") / f"reflexoes_{user}.json"),
+                                (Path("anotacoes") / f"anotacoes_{user}.json")
                             ]
-                            for caminho in arquivos_locais:
-                                if os.path.exists(caminho):
-                                    os.remove(caminho)
+                            for caminho in arquivos_locais_base:
+                                if caminho.exists():
+                                    caminho.unlink()
 
                             st.success(f"Usuário '{user}' e todos os seus dados foram excluídos com sucesso.")
                             st.rerun()
@@ -216,7 +241,7 @@ if assinaturas:
                     if st.button("Cancelar", key=f"cancel_delete_{user}"):
                         st.info("Exclusão cancelada.")
 
-            # CORRIGIDO: Lógica de notificação movida para a indentação correta, dentro do 'for loop'.
+            # Lógica de notificação
             if agora >= expiracao and not dados.get("email_enviado", False):
                 assunto_admin = f"ALERTA: Assinatura de '{user}' Expirou"
                 mensagem_admin = f"A assinatura do usuário '{user}' (email: {dados['email']}) expirou em {dados['expiracao']}."
@@ -238,7 +263,6 @@ st.divider()
 
 # --- PAINEL TURBINADO (código mantido como estava, já era funcional) ---
 st.subheader("📊 Painel de Assinaturas")
-# ... (o resto do seu código do painel continua aqui) ...
 ativas, expiradas = [], []
 for user, dados in assinaturas.items():
     expiracao = datetime.strptime(dados['expiracao'], "%Y-%m-%d %H:%M:%S")
