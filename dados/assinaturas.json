@@ -80,7 +80,7 @@
         "email": "israelnetmax@gmail.com",
         "email_enviado": false,
         "notificar_cliente": false,
-        "primeiro_login": true
+        "primeiro_login": false
     },
     "bia": {
         "senha": "$2a$12$VQRm7HiJm14ahfQfNYXbyeKUFJUhjeB4d3RZLhfRf8iEjEGK.7O9y",
