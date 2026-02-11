@@ -16,7 +16,7 @@
         "email_enviado": false,
         "notificar_cliente": false
     },
-    "arvis04": {
+    "jarvis04": {
         "senha": "$2b$12$rEXDhL9nDcjQ4A6vHMkta.iTJnNOuo9Se227fXqxFH78BcHBJp6Ju",
         "ativacao": "2025-07-05 00:13:00",
         "expiracao": "9999-12-31 23:59:59",
@@ -74,10 +74,10 @@
         "primeiro_login": true
     },
     "ingrid": {
-        "senha": "$2b$12$SlXErV5e2pu73WLDfYN2Su4PELcugpx5amugdSoKKH5K0dtr51ZWm",
+        "senha": "$2a$12$2Y1ecduCF5HIRWTBZxaHBeFznjIkylslk5d/2UKwOysJMJNogxn3G",
         "ativacao": "2025-07-24 00:24:09",
         "expiracao": "9999-12-31 23:59:59",
-        "email": "Ingrid1234",
+        "email": "israelnetmax@gmail.com",
         "email_enviado": false,
         "notificar_cliente": false,
         "primeiro_login": true
