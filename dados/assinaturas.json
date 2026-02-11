@@ -83,13 +83,13 @@
         "primeiro_login": true
     },
     "bia": {
-        "senha": "$2b$12$8jD3WxkjexXRjKjfl/57h.srfUf15kfQjYmvrKtmfqs5u7huBfndG",
+        "senha": "$2a$12$VQRm7HiJm14ahfQfNYXbyeKUFJUhjeB4d3RZLhfRf8iEjEGK.7O9y",
         "ativacao": "2025-07-24 15:39:16",
         "expiracao": "9999-12-31 23:59:59",
         "email": "israelnetmax@gmail.com",
         "email_enviado": false,
         "notificar_cliente": false,
-        "primeiro_login": true
+        "primeiro_login": false
     },
     "leidy": {
         "senha": "$2b$12$fu/vS9FE8Bea840IDtkeBulrSRhbWkDkkt36fgXKN/EqvlUYViWQW",
