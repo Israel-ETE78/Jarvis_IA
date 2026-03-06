@@ -1415,6 +1415,7 @@ with st.sidebar:
     a.link-button:hover { background-color: #005fa3; }
     </style>
     <a class='link-button' href='https://front-helpdesk-israel.onrender.com/' target='_blank'>👑 Painel HelpDesk Cloud</a>
+    <a class='link-button' href='https://jarvis-ia-frontend.onrender.com/login.html' target='_blank'>🤖 Jarvis IA Light</a>
     <a class='link-button' href='https://jarvis-lembrete.streamlit.app/' target='_blank'>🔔 Jarvis Lembrete</a>
     <a class='link-button' href='https://jarvis-ia-video-analysis.streamlit.app/' target='_blank'>🎥 Analisador de Mídia</a>
     <a class='link-button' href='https://simulador-cdi-frontend.onrender.com' target='_blank'>💰 Simulador CDI</a>
